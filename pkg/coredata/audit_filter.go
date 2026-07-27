@@ -22,11 +22,13 @@ package coredata
 
 import (
 	"github.com/jackc/pgx/v5"
+	"go.probo.inc/probo/pkg/gid"
 )
 
 type (
 	AuditFilter struct {
 		compliancePortalVisibilities []CompliancePortalVisibility
+		compliancePortalID           *gid.GID
 	}
 )
 
@@ -41,6 +43,13 @@ func NewAuditCompliancePortalFilter() *AuditFilter {
 			CompliancePortalVisibilityPublic,
 		},
 	}
+}
+
+func (f *AuditFilter) WithCompliancePortalID(compliancePortalID gid.GID) *AuditFilter {
+	clone := *f
+	clone.compliancePortalID = &compliancePortalID
+
+	return &clone
 }
 
 func (f *AuditFilter) WithCompliancePortalVisibilities(visibilities ...CompliancePortalVisibility) *AuditFilter {
@@ -60,12 +69,26 @@ func (f *AuditFilter) SQLArguments() pgx.NamedArgs {
 		args["trust_center_visibilities"] = visibilities
 	}
 
+	if f.compliancePortalID != nil {
+		args["compliance_portal_id"] = *f.compliancePortalID
+	}
+
 	return args
 }
 
 func (f *AuditFilter) SQLFragment() string {
+	if f.compliancePortalVisibilities != nil && f.compliancePortalID != nil {
+		return `EXISTS (
+			SELECT 1
+			FROM trust_center_audits tca
+			WHERE tca.audit_id = audits.id
+				AND tca.trust_center_id = @compliance_portal_id
+				AND tca.visibility = ANY(@trust_center_visibilities::trust_center_visibility[])
+		)`
+	}
+
 	if f.compliancePortalVisibilities != nil {
-		return "trust_center_visibility = ANY(@trust_center_visibilities::trust_center_visibility[])"
+		return "FALSE"
 	}
 
 	return "TRUE"

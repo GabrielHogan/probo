@@ -135,6 +135,9 @@ const (
 	AccessReviewCampaignSourceFetchAttemptEntityType uint16 = 103
 	CompliancePortalCommitmentGroupEntityType        uint16 = 104
 	CompliancePortalCommitmentEntityType             uint16 = 105
+	CompliancePortalDocumentEntityType                 uint16 = 110
+	CompliancePortalAuditEntityType                    uint16 = 111
+	CompliancePortalThirdPartyEntityType               uint16 = 112
 	CertificateEntityType                            uint16 = 106
 	DeviceEntityType                                 uint16 = 107
 	DevicePostureEntityType                          uint16 = 108
@@ -337,6 +340,12 @@ func NewEntityFromID(id gid.GID) (any, bool) {
 		return &CompliancePortalCommitmentGroup{ID: id}, true
 	case CompliancePortalCommitmentEntityType:
 		return &CompliancePortalCommitment{ID: id}, true
+	case CompliancePortalDocumentEntityType:
+		return &CompliancePortalDocument{ID: id}, true
+	case CompliancePortalAuditEntityType:
+		return &CompliancePortalAudit{ID: id}, true
+	case CompliancePortalThirdPartyEntityType:
+		return &CompliancePortalThirdParty{ID: id}, true
 	case CertificateEntityType:
 		return &Certificate{ID: id}, true
 	case DeviceEntityType:

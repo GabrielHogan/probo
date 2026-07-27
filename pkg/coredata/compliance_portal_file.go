@@ -37,6 +37,7 @@ type (
 	CompliancePortalFile struct {
 		ID                         gid.GID                    `db:"id"`
 		OrganizationID             gid.GID                    `db:"organization_id"`
+		CompliancePortalID         gid.GID                    `db:"trust_center_id"`
 		Name                       string                     `db:"name"`
 		Category                   string                     `db:"category"`
 		FileID                     gid.GID                    `db:"file_id"`
@@ -110,6 +111,7 @@ func (t *CompliancePortalFile) LoadByID(
 SELECT
     id,
     organization_id,
+    trust_center_id,
     name,
     category,
     file_id,
@@ -153,6 +155,7 @@ func (f *CompliancePortalFiles) LoadByIDs(
 SELECT
     id,
     organization_id,
+    trust_center_id,
     name,
     category,
     file_id,
@@ -213,6 +216,7 @@ VALUES (
     @tenant_id,
     @id,
     @organization_id,
+    @trust_center_id,
     @name,
     @category,
     @file_id,
@@ -226,6 +230,7 @@ VALUES (
 		"tenant_id":               scope.GetTenantID(),
 		"id":                      t.ID,
 		"organization_id":         t.OrganizationID,
+		"trust_center_id":         t.CompliancePortalID,
 		"name":                    t.Name,
 		"category":                t.Category,
 		"file_id":                 t.FileID,
@@ -260,6 +265,7 @@ WHERE
 RETURNING
     id,
     organization_id,
+    trust_center_id,
     name,
     category,
     file_id,
@@ -320,11 +326,11 @@ WHERE
 	return nil
 }
 
-func (t *CompliancePortalFiles) LoadByOrganizationID(
+func (t *CompliancePortalFiles) LoadByCompliancePortalID(
 	ctx context.Context,
 	conn pg.Querier,
 	scope Scoper,
-	organizationID gid.GID,
+	compliancePortalID gid.GID,
 	cursor *page.Cursor[CompliancePortalFileOrderField],
 	filter *CompliancePortalFileFilter,
 ) error {
@@ -332,6 +338,7 @@ func (t *CompliancePortalFiles) LoadByOrganizationID(
 SELECT
     id,
     organization_id,
+    trust_center_id,
     name,
     category,
     file_id,
@@ -342,14 +349,14 @@ FROM
     trust_center_files
 WHERE
     %s
-    AND organization_id = @organization_id
+    AND trust_center_id = @trust_center_id
     AND %s
     AND %s
 `
 
 	q = fmt.Sprintf(q, scope.SQLFragment(), filter.SQLFragment(), cursor.SQLFragment())
 
-	args := pgx.StrictNamedArgs{"organization_id": organizationID}
+	args := pgx.StrictNamedArgs{"trust_center_id": compliancePortalID}
 	maps.Copy(args, scope.SQLArguments())
 	maps.Copy(args, filter.SQLArguments())
 	maps.Copy(args, cursor.SQLArguments())
@@ -369,11 +376,11 @@ WHERE
 	return nil
 }
 
-func (t *CompliancePortalFiles) CountByOrganizationID(
+func (t *CompliancePortalFiles) CountByCompliancePortalID(
 	ctx context.Context,
 	conn pg.Querier,
 	scope Scoper,
-	organizationID gid.GID,
+	compliancePortalID gid.GID,
 ) (int, error) {
 	q := `
 SELECT
@@ -382,12 +389,12 @@ FROM
     trust_center_files
 WHERE
     %s
-    AND organization_id = @organization_id
+    AND trust_center_id = @trust_center_id
 `
 
 	q = fmt.Sprintf(q, scope.SQLFragment())
 
-	args := pgx.StrictNamedArgs{"organization_id": organizationID}
+	args := pgx.StrictNamedArgs{"trust_center_id": compliancePortalID}
 	maps.Copy(args, scope.SQLArguments())
 
 	var count int

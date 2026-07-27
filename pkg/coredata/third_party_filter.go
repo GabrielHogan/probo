@@ -22,10 +22,12 @@ package coredata
 
 import (
 	"github.com/jackc/pgx/v5"
+	"go.probo.inc/probo/pkg/gid"
 )
 
 type (
 	ThirdPartyFilter struct {
+		compliancePortalID     *gid.GID
 		showOnCompliancePortal *bool
 		level                  *int
 		query                  *string
@@ -48,6 +50,13 @@ func NewThirdPartyFilter(
 		category:               category,
 		country:                country,
 	}
+}
+
+func (f *ThirdPartyFilter) WithCompliancePortalID(compliancePortalID gid.GID) *ThirdPartyFilter {
+	clone := *f
+	clone.compliancePortalID = &compliancePortalID
+
+	return &clone
 }
 
 func (f *ThirdPartyFilter) SQLArguments() pgx.StrictNamedArgs {
@@ -79,6 +88,10 @@ func (f *ThirdPartyFilter) SQLArguments() pgx.StrictNamedArgs {
 		args["filter_country"] = string(*f.country)
 	}
 
+	if f.compliancePortalID != nil {
+		args["compliance_portal_id"] = *f.compliancePortalID
+	}
+
 	return args
 }
 
@@ -86,8 +99,15 @@ func (f *ThirdPartyFilter) SQLFragment() string {
 	return `
 (
 	CASE
+		WHEN @compliance_portal_id::text IS NOT NULL AND @show_on_trust_center::boolean IS TRUE THEN
+			EXISTS (
+				SELECT 1
+				FROM trust_center_third_parties tctp
+				WHERE tctp.third_party_id = third_parties.id
+					AND tctp.trust_center_id = @compliance_portal_id
+			)
 		WHEN @show_on_trust_center::boolean IS NOT NULL THEN
-			show_on_trust_center = @show_on_trust_center::boolean
+			FALSE
 		ELSE TRUE
 	END
 	AND CASE

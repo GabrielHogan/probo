@@ -37,7 +37,8 @@ import (
 type (
 	RightsRequest struct {
 		ID             gid.GID            `db:"id"`
-		OrganizationID gid.GID            `db:"organization_id"`
+		OrganizationID     gid.GID  `db:"organization_id"`
+		CompliancePortalID *gid.GID `db:"trust_center_id"`
 		RequestType    RightsRequestType  `db:"request_type"`
 		RequestState   RightsRequestState `db:"request_state"`
 		DataSubject    *string            `db:"data_subject"`
@@ -117,6 +118,7 @@ func (rr *RightsRequest) LoadByID(
 SELECT
 	id,
 	organization_id,
+	trust_center_id,
 	request_type,
 	request_state,
 	data_subject,
@@ -202,6 +204,7 @@ func (rrs *RightsRequests) LoadByOrganizationID(
 SELECT
 	id,
 	organization_id,
+	trust_center_id,
 	request_type,
 	request_state,
 	data_subject,
@@ -252,6 +255,7 @@ func (rrs *RightsRequests) LoadByOrganizationIDAndContact(
 SELECT
 	id,
 	organization_id,
+	trust_center_id,
 	request_type,
 	request_state,
 	data_subject,
@@ -294,6 +298,61 @@ WHERE
 	return nil
 }
 
+func (rrs *RightsRequests) LoadByCompliancePortalIDAndContact(
+	ctx context.Context,
+	conn pg.Querier,
+	scope Scoper,
+	compliancePortalID gid.GID,
+	contact string,
+	cursor *page.Cursor[RightsRequestOrderField],
+) error {
+	q := `
+SELECT
+	id,
+	organization_id,
+	trust_center_id,
+	request_type,
+	request_state,
+	data_subject,
+	contact,
+	details,
+	deadline,
+	action_taken,
+	created_at,
+	updated_at
+FROM
+	rights_requests
+WHERE
+	%s
+	AND trust_center_id = @trust_center_id
+	AND contact = @contact
+	AND %s
+`
+
+	q = fmt.Sprintf(q, scope.SQLFragment(), cursor.SQLFragment())
+
+	args := pgx.StrictNamedArgs{
+		"trust_center_id": compliancePortalID,
+		"contact":         contact,
+	}
+	maps.Copy(args, scope.SQLArguments())
+	maps.Copy(args, cursor.SQLArguments())
+
+	rows, err := conn.Query(ctx, q, args)
+	if err != nil {
+		return fmt.Errorf("cannot query rights requests: %w", err)
+	}
+
+	requests, err := pgx.CollectRows(rows, pgx.RowToAddrOfStructByName[RightsRequest])
+	if err != nil {
+		return fmt.Errorf("cannot collect rights requests: %w", err)
+	}
+
+	*rrs = requests
+
+	return nil
+}
+
 func (rr *RightsRequest) Insert(
 	ctx context.Context,
 	conn pg.Tx,
@@ -304,6 +363,7 @@ INSERT INTO rights_requests (
 	id,
 	tenant_id,
 	organization_id,
+	trust_center_id,
 	request_type,
 	request_state,
 	data_subject,
@@ -317,6 +377,7 @@ INSERT INTO rights_requests (
 	@id,
 	@tenant_id,
 	@organization_id,
+	@trust_center_id,
 	@request_type,
 	@request_state,
 	@data_subject,
@@ -333,6 +394,7 @@ INSERT INTO rights_requests (
 		"id":              rr.ID,
 		"tenant_id":       scope.GetTenantID(),
 		"organization_id": rr.OrganizationID,
+		"trust_center_id": rr.CompliancePortalID,
 		"request_type":    rr.RequestType,
 		"request_state":   rr.RequestState,
 		"data_subject":    rr.DataSubject,

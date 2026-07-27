@@ -129,7 +129,6 @@ SELECT
     documents.current_published_major,
     documents.current_published_minor,
     documents.write_mode,
-    documents.trust_center_visibility,
     documents.status,
     documents.archived_at,
     documents.created_at,
@@ -189,7 +188,6 @@ SELECT
     documents.current_published_major,
     documents.current_published_minor,
     documents.write_mode,
-    documents.trust_center_visibility,
     documents.status,
     documents.archived_at,
     documents.created_at,
@@ -250,7 +248,6 @@ SELECT
     documents.current_published_major,
     documents.current_published_minor,
     documents.write_mode,
-    documents.trust_center_visibility,
     documents.status,
     documents.archived_at,
     documents.created_at,
@@ -346,8 +343,7 @@ base AS (
         documents.current_published_major,
         documents.current_published_minor,
         documents.write_mode,
-        documents.trust_center_visibility,
-        documents.status,
+            documents.status,
         documents.archived_at,
         documents.created_at,
         documents.updated_at,
@@ -387,7 +383,25 @@ SELECT * FROM base WHERE %s
 	return nil
 }
 
-func (p *Documents) LoadPublishedByOrganizationID(
+func (p *Documents) LoadPublishedByCompliancePortalID(
+	ctx context.Context,
+	conn pg.Querier,
+	scope Scoper,
+	compliancePortalID gid.GID,
+	organizationID gid.GID,
+	cursor *page.Cursor[DocumentOrderField],
+	filter *DocumentFilter,
+) error {
+	if filter == nil {
+		filter = NewDocumentCompliancePortalFilter()
+	}
+
+	filter = filter.WithCompliancePortalID(compliancePortalID)
+
+	return p.loadPublished(ctx, conn, scope, organizationID, cursor, filter)
+}
+
+func (p *Documents) loadPublished(
 	ctx context.Context,
 	conn pg.Querier,
 	scope Scoper,
@@ -422,7 +436,7 @@ base AS (
 		documents.current_published_major,
 		documents.current_published_minor,
 		documents.write_mode,
-		documents.trust_center_visibility,
+		tcd.visibility AS trust_center_visibility,
 		documents.status,
 		documents.archived_at,
 		documents.created_at,
@@ -431,6 +445,9 @@ base AS (
 		COALESCE(lv.document_type, 'OTHER') AS document_type
 	FROM
 		documents
+	INNER JOIN trust_center_documents tcd
+		ON tcd.document_id = documents.id
+		AND tcd.trust_center_id = @compliance_portal_id
 	LEFT JOIN latest_versions lv ON lv.document_id = documents.id
 	LEFT JOIN published_versions pv ON pv.document_id = documents.id
 	WHERE
@@ -443,7 +460,10 @@ SELECT * FROM base WHERE %s
 `
 	q = fmt.Sprintf(q, scope.SQLFragment(), filter.SQLFragment(), cursor.SQLFragment())
 
-	args := pgx.NamedArgs{"organization_id": organizationID}
+	args := pgx.NamedArgs{
+		"organization_id":      organizationID,
+		"compliance_portal_id": filter.compliancePortalID,
+	}
 	maps.Copy(args, scope.SQLArguments())
 	maps.Copy(args, filter.SQLArguments())
 	maps.Copy(args, cursor.SQLArguments())
@@ -477,7 +497,6 @@ INSERT INTO
 		current_published_major,
 		current_published_minor,
 		write_mode,
-		trust_center_visibility,
 		status,
 		archived_at,
 		created_at,
@@ -490,7 +509,6 @@ VALUES (
     @current_published_major,
     @current_published_minor,
     @write_mode,
-    @trust_center_visibility,
     @status,
     @archived_at,
     @created_at,
@@ -505,7 +523,6 @@ VALUES (
 		"current_published_major": p.CurrentPublishedMajor,
 		"current_published_minor": p.CurrentPublishedMinor,
 		"write_mode":              p.WriteMode,
-		"trust_center_visibility": p.CompliancePortalVisibility,
 		"status":                  p.Status,
 		"archived_at":             p.ArchivedAt,
 		"created_at":              p.CreatedAt,
@@ -566,7 +583,6 @@ UPDATE
 SET
 	current_published_major = @current_published_major,
 	current_published_minor = @current_published_minor,
-	trust_center_visibility = @trust_center_visibility,
 	status = @status,
 	archived_at = @archived_at,
 	updated_at = @updated_at
@@ -582,7 +598,6 @@ WHERE
 		"updated_at":              time.Now(),
 		"current_published_major": p.CurrentPublishedMajor,
 		"current_published_minor": p.CurrentPublishedMinor,
-		"trust_center_visibility": p.CompliancePortalVisibility,
 		"status":                  p.Status,
 		"archived_at":             p.ArchivedAt,
 	}
@@ -931,7 +946,7 @@ func (p *Documents) BulkArchive(
 ) error {
 	q := `
 UPDATE documents
-SET status = 'ARCHIVED', archived_at = @archived_at, trust_center_visibility = 'NONE', updated_at = @updated_at
+SET status = 'ARCHIVED', archived_at = @archived_at, updated_at = @updated_at
 WHERE %s AND id = ANY(@document_ids)
 `
 	q = fmt.Sprintf(q, scope.SQLFragment())
