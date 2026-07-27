@@ -64,7 +64,6 @@ func TestMCP_GetCompliancePortal(t *testing.T) {
 	t.Parallel()
 	owner := testutil.NewClient(t, testutil.RoleOwner)
 	mc := testutil.NewMCPClient(t, owner)
-	orgID := owner.GetOrganizationID().String()
 
 	compliancePortalID := mcpCompliancePortalID(t, owner)
 
@@ -123,7 +122,7 @@ func TestMCP_GetCompliancePortal(t *testing.T) {
 		CompliancePortal compliancePortal `json:"compliance_portal"`
 	}
 	mc.CallToolInto("getCompliancePortal", map[string]any{
-		"organization_id": orgID,
+		"compliance_portal_id": compliancePortalID,
 	}, &result)
 
 	assert.NotEmpty(t, result.CompliancePortal.ID)
