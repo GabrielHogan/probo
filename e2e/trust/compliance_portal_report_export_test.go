@@ -178,9 +178,11 @@ func setupPublicAuditReport(t *testing.T, owner *testutil.Client) (compliancePor
 	reportID = uploadResult.UploadAuditReport.Audit.ReportFile.ID
 	require.NotEmpty(t, reportID)
 
+	compliancePortalID = lookupCompliancePortalID(t, owner)
+
 	const setVisibilityMutation = `
-		mutation UpdateAudit($input: UpdateAuditInput!) {
-			updateAudit(input: $input) {
+		mutation UpdateCompliancePortalAuditVisibility($input: UpdateCompliancePortalAuditVisibilityInput!) {
+			updateCompliancePortalAuditVisibility(input: $input) {
 				audit { id }
 			}
 		}
@@ -188,13 +190,13 @@ func setupPublicAuditReport(t *testing.T, owner *testutil.Client) (compliancePor
 
 	err = owner.Execute(setVisibilityMutation, map[string]any{
 		"input": map[string]any{
-			"id":                         auditID,
+			"compliancePortalId":         compliancePortalID,
+			"auditId":                    auditID,
 			"compliancePortalVisibility": "PUBLIC",
 		},
 	}, nil)
 	require.NoError(t, err)
 
-	compliancePortalID = lookupCompliancePortalID(t, owner)
 	activateCompliancePortal(t, owner, compliancePortalID)
 
 	return compliancePortalID, reportID

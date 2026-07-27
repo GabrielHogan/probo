@@ -54,39 +54,19 @@ type complianceCustomLink struct {
 	URL  string `json:"url"`
 }
 
+func mcpCompliancePortalID(t *testing.T, owner *testutil.Client) string {
+	t.Helper()
+
+	return factory.CreateCompliancePortal(owner)
+}
+
 func TestMCP_GetCompliancePortal(t *testing.T) {
 	t.Parallel()
 	owner := testutil.NewClient(t, testutil.RoleOwner)
 	mc := testutil.NewMCPClient(t, owner)
 	orgID := owner.GetOrganizationID().String()
 
-	const compliancePortalQuery = `
-		query($organizationId: ID!) {
-			node(id: $organizationId) {
-				... on Organization {
-					compliancePortal {
-						id
-					}
-				}
-			}
-		}
-	`
-
-	var compliancePortalLookup struct {
-		Node struct {
-			CompliancePortal struct {
-				ID string `json:"id"`
-			} `json:"compliancePortal"`
-		} `json:"node"`
-	}
-
-	err := owner.Execute(compliancePortalQuery, map[string]any{
-		"organizationId": orgID,
-	}, &compliancePortalLookup)
-	require.NoError(t, err)
-	require.NotEmpty(t, compliancePortalLookup.Node.CompliancePortal.ID)
-
-	compliancePortalID := compliancePortalLookup.Node.CompliancePortal.ID
+	compliancePortalID := mcpCompliancePortalID(t, owner)
 
 	const uploadMutation = `
 		mutation UpdateCompliancePortalBrand($input: UpdateCompliancePortalBrandInput!) {
@@ -163,13 +143,10 @@ func TestMCP_UpdateCompliancePortal(t *testing.T) {
 	orgID := owner.GetOrganizationID().String()
 
 	// Get compliance portal ID
-	var getResult struct {
-		CompliancePortal compliancePortal `json:"compliance_portal"`
-	}
-	mc.CallToolInto("getCompliancePortal", map[string]any{
-		"organization_id": orgID,
-	}, &getResult)
-	require.NotEmpty(t, getResult.CompliancePortal.ID)
+	portalID := mcpCompliancePortalID(t, owner)
+	getResult := struct {
+		CompliancePortal compliancePortal
+	}{CompliancePortal: compliancePortal{ID: portalID}}
 
 	// Update
 	var updateResult struct {
@@ -210,13 +187,7 @@ func TestMCP_AddCompliancePortalReference(t *testing.T) {
 	orgID := owner.GetOrganizationID().String()
 
 	// Get compliance portal ID
-	var getResult struct {
-		CompliancePortal compliancePortal `json:"compliance_portal"`
-	}
-	mc.CallToolInto("getCompliancePortal", map[string]any{
-		"organization_id": orgID,
-	}, &getResult)
-	portalID := getResult.CompliancePortal.ID
+	portalID := mcpCompliancePortalID(t, owner)
 
 	var result struct {
 		CompliancePortalReference compliancePortalReference `json:"compliance_portal_reference"`
@@ -238,13 +209,7 @@ func TestMCP_UpdateCompliancePortalReference(t *testing.T) {
 	orgID := owner.GetOrganizationID().String()
 
 	// Get compliance portal ID
-	var getResult struct {
-		CompliancePortal compliancePortal `json:"compliance_portal"`
-	}
-	mc.CallToolInto("getCompliancePortal", map[string]any{
-		"organization_id": orgID,
-	}, &getResult)
-	portalID := getResult.CompliancePortal.ID
+	portalID := mcpCompliancePortalID(t, owner)
 
 	// Create reference
 	var addResult struct {
@@ -278,13 +243,7 @@ func TestMCP_DeleteCompliancePortalReference(t *testing.T) {
 	orgID := owner.GetOrganizationID().String()
 
 	// Get compliance portal ID
-	var getResult struct {
-		CompliancePortal compliancePortal `json:"compliance_portal"`
-	}
-	mc.CallToolInto("getCompliancePortal", map[string]any{
-		"organization_id": orgID,
-	}, &getResult)
-	portalID := getResult.CompliancePortal.ID
+	portalID := mcpCompliancePortalID(t, owner)
 
 	// Create reference
 	var addResult struct {
@@ -315,13 +274,7 @@ func TestMCP_ListCompliancePortalReferences(t *testing.T) {
 	orgID := owner.GetOrganizationID().String()
 
 	// Get compliance portal ID
-	var getResult struct {
-		CompliancePortal compliancePortal `json:"compliance_portal"`
-	}
-	mc.CallToolInto("getCompliancePortal", map[string]any{
-		"organization_id": orgID,
-	}, &getResult)
-	portalID := getResult.CompliancePortal.ID
+	portalID := mcpCompliancePortalID(t, owner)
 
 	// Create references
 	for i := range 2 {
@@ -353,7 +306,6 @@ func TestMCP_ListCompliancePortalFiles(t *testing.T) {
 	t.Parallel()
 	owner := testutil.NewClient(t, testutil.RoleOwner)
 	mc := testutil.NewMCPClient(t, owner)
-	orgID := owner.GetOrganizationID().String()
 
 	// List files (may be empty, just verify the tool works)
 	var listResult struct {
@@ -363,7 +315,7 @@ func TestMCP_ListCompliancePortalFiles(t *testing.T) {
 		} `json:"compliance_portal_files"`
 	}
 	mc.CallToolInto("listCompliancePortalFiles", map[string]any{
-		"organization_id": orgID,
+		"compliance_portal_id": mcpCompliancePortalID(t, owner),
 	}, &listResult)
 
 	// Just assert the call succeeded — files require multipart upload
@@ -377,13 +329,7 @@ func TestMCP_AddComplianceCustomLink(t *testing.T) {
 	orgID := owner.GetOrganizationID().String()
 
 	// Get compliance portal ID
-	var getResult struct {
-		CompliancePortal compliancePortal `json:"compliance_portal"`
-	}
-	mc.CallToolInto("getCompliancePortal", map[string]any{
-		"organization_id": orgID,
-	}, &getResult)
-	portalID := getResult.CompliancePortal.ID
+	portalID := mcpCompliancePortalID(t, owner)
 
 	var result struct {
 		ComplianceCustomLink complianceCustomLink `json:"compliance_custom_link"`
@@ -405,13 +351,7 @@ func TestMCP_UpdateComplianceCustomLink(t *testing.T) {
 	orgID := owner.GetOrganizationID().String()
 
 	// Get compliance portal ID
-	var getResult struct {
-		CompliancePortal compliancePortal `json:"compliance_portal"`
-	}
-	mc.CallToolInto("getCompliancePortal", map[string]any{
-		"organization_id": orgID,
-	}, &getResult)
-	portalID := getResult.CompliancePortal.ID
+	portalID := mcpCompliancePortalID(t, owner)
 
 	// Create
 	var addResult struct {
@@ -445,13 +385,7 @@ func TestMCP_DeleteComplianceCustomLink(t *testing.T) {
 	orgID := owner.GetOrganizationID().String()
 
 	// Get compliance portal ID
-	var getResult struct {
-		CompliancePortal compliancePortal `json:"compliance_portal"`
-	}
-	mc.CallToolInto("getCompliancePortal", map[string]any{
-		"organization_id": orgID,
-	}, &getResult)
-	portalID := getResult.CompliancePortal.ID
+	portalID := mcpCompliancePortalID(t, owner)
 
 	// Create
 	var addResult struct {
@@ -482,13 +416,7 @@ func TestMCP_ListComplianceCustomLinks(t *testing.T) {
 	orgID := owner.GetOrganizationID().String()
 
 	// Get compliance portal ID
-	var getResult struct {
-		CompliancePortal compliancePortal `json:"compliance_portal"`
-	}
-	mc.CallToolInto("getCompliancePortal", map[string]any{
-		"organization_id": orgID,
-	}, &getResult)
-	portalID := getResult.CompliancePortal.ID
+	portalID := mcpCompliancePortalID(t, owner)
 
 	// Create URLs
 	for i := range 2 {
