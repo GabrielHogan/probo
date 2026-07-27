@@ -160,17 +160,17 @@ func (s *Service) RenderCompliancePortalMarkdown(
 		return fmt.Errorf("cannot fetch compliance frameworks: %w", err)
 	}
 
-	data.Documents, err = s.fetchDocuments(ctx, scope, org.ID)
+	data.Documents, err = s.fetchDocuments(ctx, scope, compliancePageID, org.ID)
 	if err != nil {
 		return fmt.Errorf("cannot fetch documents: %w", err)
 	}
 
-	data.Audits, err = s.fetchAudits(ctx, scope, org.ID)
+	data.Audits, err = s.fetchAudits(ctx, scope, compliancePageID, org.ID)
 	if err != nil {
 		return fmt.Errorf("cannot fetch audits: %w", err)
 	}
 
-	data.ThirdParties, err = s.fetchThirdParties(ctx, scope, org.ID)
+	data.ThirdParties, err = s.fetchThirdParties(ctx, scope, compliancePageID, org.ID)
 	if err != nil {
 		return fmt.Errorf("cannot fetch thirdParties: %w", err)
 	}
@@ -220,7 +220,7 @@ func (s *Service) RenderSitemap(
 		BaseURL: baseURL,
 	}
 
-	data.Documents, err = s.fetchDocumentIDs(ctx, scope, org.ID)
+	data.Documents, err = s.fetchDocumentIDs(ctx, scope, compliancePageID, org.ID)
 	if err != nil {
 		return fmt.Errorf("cannot fetch document IDs for sitemap: %w", err)
 	}
@@ -253,6 +253,7 @@ func (s *Service) RenderRobotsTxt(
 func (s *Service) fetchDocumentIDs(
 	ctx context.Context,
 	scope coredata.Scoper,
+	compliancePageID gid.GID,
 	orgID gid.GID,
 ) ([]string, error) {
 	seen := make(map[gid.GID]struct{})
@@ -280,7 +281,7 @@ func (s *Service) fetchDocumentIDs(
 			},
 		)
 
-		result, err := s.ListDocumentsForOrganizationID(ctx, scope, orgID, cursor, nil)
+		result, err := s.ListDocumentsForCompliancePortalID(ctx, scope, compliancePageID, orgID, cursor, nil)
 		if err != nil {
 			return nil, fmt.Errorf("cannot list documents: %w", err)
 		}
@@ -314,10 +315,10 @@ func (s *Service) fetchDocumentIDs(
 			},
 		)
 
-		result, err := s.ListPortalFilesForOrganizationID(
+		result, err := s.ListPortalFilesForCompliancePortalID(
 			ctx,
 			scope,
-			orgID,
+			compliancePageID,
 			cursor,
 			coredata.NewCompliancePortalFileFilter(),
 		)
@@ -354,7 +355,7 @@ func (s *Service) fetchDocumentIDs(
 			},
 		)
 
-		result, err := s.ListAuditsForOrganizationID(ctx, scope, orgID, cursor, nil)
+		result, err := s.ListAuditsForCompliancePortalID(ctx, scope, compliancePageID, orgID, cursor, nil)
 		if err != nil {
 			return nil, fmt.Errorf("cannot list audits: %w", err)
 		}
@@ -455,6 +456,7 @@ func (s *Service) fetchComplianceFrameworks(
 func (s *Service) fetchDocuments(
 	ctx context.Context,
 	scope coredata.Scoper,
+	compliancePageID gid.GID,
 	orgID gid.GID,
 ) ([]compliancePageDocument, error) {
 	var docs []compliancePageDocument
@@ -471,7 +473,7 @@ func (s *Service) fetchDocuments(
 			},
 		)
 
-		result, err := s.ListDocumentsForOrganizationID(ctx, scope, orgID, cursor, nil)
+		result, err := s.ListDocumentsForCompliancePortalID(ctx, scope, compliancePageID, orgID, cursor, nil)
 		if err != nil {
 			return nil, fmt.Errorf("cannot list documents: %w", err)
 		}
@@ -505,6 +507,7 @@ func (s *Service) fetchDocuments(
 func (s *Service) fetchAudits(
 	ctx context.Context,
 	scope coredata.Scoper,
+	compliancePageID gid.GID,
 	orgID gid.GID,
 ) ([]compliancePageAudit, error) {
 	var audits []compliancePageAudit
@@ -521,7 +524,7 @@ func (s *Service) fetchAudits(
 			},
 		)
 
-		result, err := s.ListAuditsForOrganizationID(ctx, scope, orgID, cursor, nil)
+		result, err := s.ListAuditsForCompliancePortalID(ctx, scope, compliancePageID, orgID, cursor, nil)
 		if err != nil {
 			return nil, fmt.Errorf("cannot list audits: %w", err)
 		}
@@ -568,6 +571,7 @@ func (s *Service) fetchAudits(
 func (s *Service) fetchThirdParties(
 	ctx context.Context,
 	scope coredata.Scoper,
+	compliancePageID gid.GID,
 	orgID gid.GID,
 ) ([]compliancePageThirdParty, error) {
 	var thirdParties []compliancePageThirdParty
@@ -584,7 +588,7 @@ func (s *Service) fetchThirdParties(
 			},
 		)
 
-		result, err := s.ListThirdPartiesForOrganizationID(ctx, scope, orgID, cursor, nil)
+		result, err := s.ListThirdPartiesForCompliancePortalID(ctx, scope, compliancePageID, orgID, cursor, nil)
 		if err != nil {
 			return nil, fmt.Errorf("cannot list thirdParties: %w", err)
 		}

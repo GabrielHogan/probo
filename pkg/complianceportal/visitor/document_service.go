@@ -43,9 +43,10 @@ func (e ErrDocumentArchived) Error() string {
 	return "cannot access an archived document"
 }
 
-func (s *Service) ListDocumentsForOrganizationID(
+func (s *Service) ListDocumentsForCompliancePortalID(
 	ctx context.Context,
 	scope coredata.Scoper,
+	compliancePortalID gid.GID,
 	organizationID gid.GID,
 	cursor *page.Cursor[coredata.DocumentOrderField],
 	filter *coredata.DocumentFilter,
@@ -59,7 +60,7 @@ func (s *Service) ListDocumentsForOrganizationID(
 	err := s.pg.WithConn(
 		ctx,
 		func(ctx context.Context, conn pg.Querier) error {
-			if err := documents.LoadPublishedByOrganizationID(ctx, conn, scope, organizationID, cursor, filter); err != nil {
+			if err := documents.LoadPublishedByCompliancePortalID(ctx, conn, scope, compliancePortalID, organizationID, cursor, filter); err != nil {
 				return fmt.Errorf("cannot load published documents: %w", err)
 			}
 

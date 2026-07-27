@@ -52,13 +52,15 @@ type (
 	}
 
 	CreateSignatureRequest struct {
-		OrganizationID gid.GID
-		DocumentType   coredata.ElectronicSignatureDocumentType
-		DocumentName   *string
-		FileID         gid.GID
-		SignerEmail    mail.Addr
-		ConsentText    string // optional; required when DocumentType == OTHER
-		EmailSubject   string
+		OrganizationID                gid.GID
+		CompliancePortalID            *gid.GID
+		TrustCenterEntityNameSnapshot *string
+		DocumentType                  coredata.ElectronicSignatureDocumentType
+		DocumentName                  *string
+		FileID                        gid.GID
+		SignerEmail                   mail.Addr
+		ConsentText                   string // optional; required when DocumentType == OTHER
+		EmailSubject                  string
 	}
 
 	AcceptSignatureRequest struct {
@@ -181,20 +183,22 @@ func (s *Service) CreateSignature(
 	}
 
 	sig := &coredata.ElectronicSignature{
-		ID:             signatureID,
-		OrganizationID: req.OrganizationID,
-		Status:         coredata.ElectronicSignatureStatusPending,
-		DocumentType:   req.DocumentType,
-		DocumentName:   req.DocumentName,
-		FileID:         stampedFileID,
-		SignerEmail:    req.SignerEmail.String(),
-		ConsentText:    consentText,
-		EmailSubject:   emailSubject,
-		SealVersion:    1,
-		AttemptCount:   0,
-		MaxAttempts:    10,
-		CreatedAt:      now,
-		UpdatedAt:      now,
+		ID:                            signatureID,
+		OrganizationID:                req.OrganizationID,
+		CompliancePortalID:            req.CompliancePortalID,
+		TrustCenterEntityNameSnapshot: req.TrustCenterEntityNameSnapshot,
+		Status:                        coredata.ElectronicSignatureStatusPending,
+		DocumentType:                  req.DocumentType,
+		DocumentName:                  req.DocumentName,
+		FileID:                        stampedFileID,
+		SignerEmail:                   req.SignerEmail.String(),
+		ConsentText:                   consentText,
+		EmailSubject:                  emailSubject,
+		SealVersion:                   1,
+		AttemptCount:                  0,
+		MaxAttempts:                   10,
+		CreatedAt:                     now,
+		UpdatedAt:                     now,
 	}
 
 	if err := sig.Insert(ctx, conn, scope); err != nil {

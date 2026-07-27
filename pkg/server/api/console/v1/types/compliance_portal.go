@@ -25,7 +25,10 @@ import (
 
 	"go.probo.inc/probo/pkg/coredata"
 	"go.probo.inc/probo/pkg/gid"
+	"go.probo.inc/probo/pkg/page"
 )
+
+type CompliancePortalOrderBy OrderBy[coredata.CompliancePortalOrderField]
 
 type CompliancePortal struct {
 	ID                   gid.GID                              `json:"id"`
@@ -39,6 +42,7 @@ type CompliancePortal struct {
 	Email                *string                              `json:"email,omitempty"`
 	HeadquarterAddress   *string                              `json:"headquarterAddress,omitempty"`
 	EntityName           string                               `json:"entityName"`
+	Slug                 string                               `json:"slug"`
 	CreatedAt            time.Time                            `json:"createdAt"`
 	UpdatedAt            time.Time                            `json:"updatedAt"`
 	Organization         *Organization                        `json:"organization"`
@@ -68,6 +72,7 @@ func NewCompliancePortal(tc *coredata.CompliancePortal) *CompliancePortal {
 		Email:                tc.Email,
 		HeadquarterAddress:   tc.HeadquarterAddress,
 		EntityName:           tc.EntityName,
+		Slug:                 tc.Slug,
 		CreatedAt:            tc.CreatedAt,
 		UpdatedAt:            tc.UpdatedAt,
 	}
@@ -93,4 +98,29 @@ func NewCompliancePortal(tc *coredata.CompliancePortal) *CompliancePortal {
 	}
 
 	return compliancePortal
+}
+
+func NewCompliancePortalConnection(
+	p *page.Page[*coredata.CompliancePortal, coredata.CompliancePortalOrderField],
+) *CompliancePortalConnection {
+	edges := make([]*CompliancePortalEdge, len(p.Data))
+
+	for i := range edges {
+		edges[i] = NewCompliancePortalEdge(p.Data[i], p.Cursor.OrderBy.Field)
+	}
+
+	return &CompliancePortalConnection{
+		Edges:    edges,
+		PageInfo: NewPageInfo(p),
+	}
+}
+
+func NewCompliancePortalEdge(
+	tc *coredata.CompliancePortal,
+	orderBy coredata.CompliancePortalOrderField,
+) *CompliancePortalEdge {
+	return &CompliancePortalEdge{
+		Cursor: tc.CursorKey(orderBy),
+		Node:   NewCompliancePortal(tc),
+	}
 }

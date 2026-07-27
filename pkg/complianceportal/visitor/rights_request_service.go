@@ -45,8 +45,9 @@ const RightsRequestDeadlineDays = 30
 // portal. The organization comes from the current compliance page and the
 // contact from the verified viewer's identity, so neither is client-supplied.
 type CreateRightsRequest struct {
-	OrganizationID gid.GID
-	RequestType    coredata.RightsRequestType
+	OrganizationID     gid.GID
+	CompliancePortalID gid.GID
+	RequestType        coredata.RightsRequestType
 	DataSubject    *string
 	Contact        string
 	Details        *string
@@ -76,9 +77,10 @@ func (s *Service) CreateRightsRequest(
 	deadline := now.AddDate(0, 0, RightsRequestDeadlineDays)
 
 	request := &coredata.RightsRequest{
-		ID:             gid.New(scope.GetTenantID(), coredata.RightsRequestEntityType),
-		OrganizationID: req.OrganizationID,
-		RequestType:    req.RequestType,
+		ID:                 gid.New(scope.GetTenantID(), coredata.RightsRequestEntityType),
+		OrganizationID:     req.OrganizationID,
+		CompliancePortalID: &req.CompliancePortalID,
+		RequestType:        req.RequestType,
 		RequestState:   coredata.RightsRequestStateTodo,
 		DataSubject:    req.DataSubject,
 		Contact:        &req.Contact,
@@ -119,6 +121,33 @@ func (s *Service) CreateRightsRequest(
 	}
 
 	return request, nil
+}
+
+func (s *Service) ListRightsRequestsForCompliancePortalIDAndContact(
+	ctx context.Context,
+	scope coredata.Scoper,
+	compliancePortalID gid.GID,
+	contact string,
+	cursor *page.Cursor[coredata.RightsRequestOrderField],
+) (*page.Page[*coredata.RightsRequest, coredata.RightsRequestOrderField], error) {
+	var requests coredata.RightsRequests
+
+	err := s.pg.WithConn(
+		ctx,
+		func(ctx context.Context, conn pg.Querier) error {
+			err := requests.LoadByCompliancePortalIDAndContact(ctx, conn, scope, compliancePortalID, contact, cursor)
+			if err != nil {
+				return fmt.Errorf("cannot load rights requests: %w", err)
+			}
+
+			return nil
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return page.NewPage(requests, cursor), nil
 }
 
 func (s *Service) ListRightsRequestsForOrganizationIDAndContact(

@@ -79,6 +79,38 @@ func (s *Service) GetAuditByReportFileID(
 	return audit, nil
 }
 
+func (s *Service) ListAuditsForCompliancePortalID(
+	ctx context.Context,
+	scope coredata.Scoper,
+	compliancePortalID gid.GID,
+	organizationID gid.GID,
+	cursor *page.Cursor[coredata.AuditOrderField],
+	filter *coredata.AuditFilter,
+) (*page.Page[*coredata.Audit, coredata.AuditOrderField], error) {
+	var audits coredata.Audits
+
+	if filter == nil {
+		filter = coredata.NewAuditCompliancePortalFilter()
+	}
+
+	err := s.pg.WithConn(
+		ctx,
+		func(ctx context.Context, conn pg.Querier) error {
+			err := audits.LoadByCompliancePortalID(ctx, conn, scope, compliancePortalID, organizationID, cursor, filter)
+			if err != nil {
+				return fmt.Errorf("cannot load audits: %w", err)
+			}
+
+			return nil
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return page.NewPage(audits, cursor), nil
+}
+
 func (s *Service) ListAuditsForOrganizationID(
 	ctx context.Context,
 	scope coredata.Scoper,

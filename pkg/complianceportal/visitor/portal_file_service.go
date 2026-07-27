@@ -68,10 +68,10 @@ func (s *Service) GetPortalFile(
 	return compliancePortalFile, nil
 }
 
-func (s *Service) ListPortalFilesForOrganizationID(
+func (s *Service) ListPortalFilesForCompliancePortalID(
 	ctx context.Context,
 	scope coredata.Scoper,
-	organizationID gid.GID,
+	compliancePortalID gid.GID,
 	cursor *page.Cursor[coredata.CompliancePortalFileOrderField],
 	filter *coredata.CompliancePortalFileFilter,
 ) (*page.Page[*coredata.CompliancePortalFile, coredata.CompliancePortalFileOrderField], error) {
@@ -80,7 +80,7 @@ func (s *Service) ListPortalFilesForOrganizationID(
 	err := s.pg.WithConn(
 		ctx,
 		func(ctx context.Context, conn pg.Querier) error {
-			err := compliancePortalFiles.LoadByOrganizationID(ctx, conn, scope, organizationID, cursor, filter)
+			err := compliancePortalFiles.LoadByCompliancePortalID(ctx, conn, scope, compliancePortalID, cursor, filter)
 			if err != nil {
 				return fmt.Errorf("cannot load compliance page files: %w", err)
 			}

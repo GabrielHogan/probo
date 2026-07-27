@@ -249,6 +249,10 @@ func (s *Service) GetPortalEmailPresenterConfigByOrganizationID(ctx context.Cont
 		},
 	)
 	if err != nil {
+		if errors.Is(err, coredata.ErrResourceNotFound) {
+			return emails.DefaultPresenterConfig(s.baseURL), nil
+		}
+
 		return emails.PresenterConfig{}, fmt.Errorf("cannot load compliance page for org %s: %w", orgID, err)
 	}
 
@@ -354,8 +358,10 @@ func (s *Service) ProvisionPortalMember(
 						ctx,
 						tx,
 						&esign.CreateSignatureRequest{
-							OrganizationID: access.OrganizationID,
-							DocumentType:   coredata.ElectronicSignatureDocumentTypeNDA,
+							OrganizationID:                access.OrganizationID,
+							CompliancePortalID:            &compliancePageID,
+							TrustCenterEntityNameSnapshot: &compliancePage.EntityName,
+							DocumentType:                  coredata.ElectronicSignatureDocumentTypeNDA,
 							FileID:         *compliancePage.NonDisclosureAgreementFileID,
 							SignerEmail:    identity.EmailAddress,
 							ConsentText:    NDAConsentText,

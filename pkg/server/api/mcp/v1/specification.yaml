@@ -9676,11 +9676,11 @@ components:
     ListCompliancePortalFilesInput:
       type: object
       required:
-        - organization_id
+        - compliance_portal_id
       properties:
-        organization_id:
+        compliance_portal_id:
           $ref: "#/components/schemas/GID"
-          description: Organization ID
+          description: Compliance portal ID
         order_by:
           $ref: "#/components/schemas/CompliancePortalFileOrderBy"
           description: Compliance portal file order by

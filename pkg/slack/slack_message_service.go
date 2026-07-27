@@ -125,6 +125,10 @@ func (s *Service) UpdateSlackAccessMessage(
 
 			var compliancePortal coredata.CompliancePortal
 			if err := compliancePortal.LoadByOrganizationID(ctx, tx, scope, slackMessage.OrganizationID); err != nil {
+				if errors.Is(err, coredata.ErrResourceNotFound) {
+					return nil
+				}
+
 				return fmt.Errorf("cannot load compliance portal: %w", err)
 			}
 

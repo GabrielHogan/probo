@@ -227,10 +227,10 @@ func (r *queryResolver) MyRightsRequests(ctx context.Context, first *int, after 
 	compliancePage := complianceportal.CompliancePortalFromContext(ctx)
 	scope := coredata.NewScopeFromObjectID(compliancePage.OrganizationID)
 
-	result, err := r.visitor.ListRightsRequestsForOrganizationIDAndContact(
+	result, err := r.visitor.ListRightsRequestsForCompliancePortalIDAndContact(
 		ctx,
 		scope,
-		compliancePage.OrganizationID,
+		compliancePage.ID,
 		identity.EmailAddress.String(),
 		cursor,
 	)

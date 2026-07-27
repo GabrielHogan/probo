@@ -55,6 +55,41 @@ func (s *Service) GetThirdParty(
 	return thirdParty, nil
 }
 
+func (s *Service) ListThirdPartiesForCompliancePortalID(
+	ctx context.Context,
+	scope coredata.Scoper,
+	compliancePortalID gid.GID,
+	organizationID gid.GID,
+	cursor *page.Cursor[coredata.ThirdPartyOrderField],
+	filter *coredata.ThirdPartyFilter,
+) (*page.Page[*coredata.ThirdParty, coredata.ThirdPartyOrderField], error) {
+	if filter == nil {
+		showOnCompliancePortal := true
+		filter = coredata.NewThirdPartyFilter(&showOnCompliancePortal, nil, nil, nil, nil)
+	}
+
+	filter = filter.WithCompliancePortalID(compliancePortalID)
+
+	var thirdParties coredata.ThirdParties
+
+	err := s.pg.WithConn(
+		ctx,
+		func(ctx context.Context, conn pg.Querier) error {
+			err := thirdParties.LoadByOrganizationID(ctx, conn, scope, organizationID, cursor, filter)
+			if err != nil {
+				return fmt.Errorf("cannot load thirdParties: %w", err)
+			}
+
+			return nil
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return page.NewPage(thirdParties, cursor), nil
+}
+
 func (s *Service) ListThirdPartiesForOrganizationID(
 	ctx context.Context,
 	scope coredata.Scoper,

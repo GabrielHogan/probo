@@ -264,7 +264,7 @@ func (r *compliancePortalResolver) Documents(ctx context.Context, obj *types.Com
 		documentFilter = documentFilter.WithCompliancePortalVisibilities(*filter.Visibility)
 	}
 
-	documentPage, err := visitorService.ListDocumentsForOrganizationID(ctx, scope, compliancePortal.OrganizationID, cursor, documentFilter)
+	documentPage, err := visitorService.ListDocumentsForCompliancePortalID(ctx, scope, compliancePortal.ID, compliancePortal.OrganizationID, cursor, documentFilter)
 	if err != nil {
 		r.logger.ErrorCtx(ctx, "cannot list public documents", log.Error(err))
 		return nil, gqlutils.Internal(ctx)
@@ -289,7 +289,7 @@ func (r *compliancePortalResolver) Audits(ctx context.Context, obj *types.Compli
 		auditFilter = auditFilter.WithCompliancePortalVisibilities(*filter.Visibility)
 	}
 
-	auditPage, err := visitorService.ListAuditsForOrganizationID(ctx, scope, compliancePortal.OrganizationID, cursor, auditFilter)
+	auditPage, err := visitorService.ListAuditsForCompliancePortalID(ctx, scope, compliancePortal.ID, compliancePortal.OrganizationID, cursor, auditFilter)
 	if err != nil {
 		r.logger.ErrorCtx(ctx, "cannot list public audits", log.Error(err))
 		return nil, gqlutils.Internal(ctx)
@@ -331,7 +331,7 @@ func (r *compliancePortalResolver) Subprocessors(ctx context.Context, obj *types
 	showOnCompliancePortal := true
 	thirdPartyFilter := coredata.NewThirdPartyFilter(&showOnCompliancePortal, nil, query, category, country)
 
-	thirdPartyPage, err := visitorService.ListThirdPartiesForOrganizationID(ctx, scope, compliancePortal.OrganizationID, cursor, thirdPartyFilter)
+	thirdPartyPage, err := visitorService.ListThirdPartiesForCompliancePortalID(ctx, scope, compliancePortal.ID, compliancePortal.OrganizationID, cursor, thirdPartyFilter)
 	if err != nil {
 		r.logger.ErrorCtx(ctx, "cannot list subprocessors", log.Error(err))
 		return nil, gqlutils.Internal(ctx)
@@ -429,7 +429,7 @@ func (r *compliancePortalResolver) CompliancePortalFiles(ctx context.Context, ob
 		coredata.WithCompliancePortalFileVisibilities(visibilities...),
 	)
 
-	portalFilePage, err := visitorService.ListPortalFilesForOrganizationID(ctx, scope, compliancePortal.OrganizationID, cursor, fileFilter)
+	portalFilePage, err := visitorService.ListPortalFilesForCompliancePortalID(ctx, scope, compliancePortal.ID, cursor, fileFilter)
 	if err != nil {
 		r.logger.ErrorCtx(ctx, "cannot list public compliance portal files", log.Error(err))
 		return nil, gqlutils.Internal(ctx)

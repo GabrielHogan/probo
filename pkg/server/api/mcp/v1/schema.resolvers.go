@@ -4923,6 +4923,10 @@ func (r *Resolver) GetCompliancePortalTool(ctx context.Context, req *mcp.CallToo
 
 	compliancePortal, err := prb.GetByOrganizationID(ctx, scope, input.OrganizationID)
 	if err != nil {
+		if errors.Is(err, coredata.ErrResourceNotFound) {
+			return nil, types.GetCompliancePortalOutput{}, fmt.Errorf("compliance portal not found for organization")
+		}
+
 		return nil, types.GetCompliancePortalOutput{}, fmt.Errorf("cannot get compliance portal: %w", err)
 	}
 
@@ -5130,7 +5134,7 @@ func (r *Resolver) DeleteCompliancePortalReferenceTool(ctx context.Context, req 
 // ListCompliancePortalFilesTool handles the listCompliancePortalFiles tool
 // List all files for the compliance portal
 func (r *Resolver) ListCompliancePortalFilesTool(ctx context.Context, req *mcp.CallToolRequest, input *types.ListCompliancePortalFilesInput) (*mcp.CallToolResult, types.ListCompliancePortalFilesOutput, error) {
-	scope, err := r.Authorize(ctx, input.OrganizationID, management.ActionCompliancePortalFileList)
+	scope, err := r.Authorize(ctx, input.CompliancePortalID, management.ActionCompliancePortalFileList)
 	if err != nil {
 		return nil, types.ListCompliancePortalFilesOutput{}, err
 	}
@@ -5152,7 +5156,7 @@ func (r *Resolver) ListCompliancePortalFilesTool(ctx context.Context, req *mcp.C
 	cursor := types.NewCursor(input.Size, input.Cursor, pageOrderBy)
 	filter := coredata.NewCompliancePortalFileFilter()
 
-	p, err := prb.ListFilesForOrganizationID(ctx, scope, input.OrganizationID, cursor, filter)
+	p, err := prb.ListFilesForCompliancePortalID(ctx, scope, input.CompliancePortalID, cursor, filter)
 	if err != nil {
 		return nil, types.ListCompliancePortalFilesOutput{}, fmt.Errorf("cannot list compliance portal files: %w", err)
 	}
