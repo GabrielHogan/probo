@@ -39,6 +39,9 @@ export const compliancePageLayoutQuery = graphql`
         entityName
         active
         publicUrl
+        organization {
+          id
+        }
       }
     }
   }
@@ -59,6 +62,11 @@ export function CompliancePageLayout(props: { queryRef: PreloadedQuery<Complianc
   );
   if (compliancePortal.__typename !== "CompliancePortal") {
     throw new Error("invalid type for node");
+  }
+  // Guards the nested routes too: a portal reached under another organization's
+  // URL would mix that organization's navigation with this portal's settings.
+  if (compliancePortal.organization.id !== organizationId) {
+    throw new Error("compliance portal does not belong to this organization");
   }
 
   const portalBase = `/organizations/${organizationId}/compliance-pages/${compliancePortalId}`;

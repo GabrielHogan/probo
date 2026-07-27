@@ -29,6 +29,8 @@ type (
 	AuditFilter struct {
 		compliancePortalVisibilities []CompliancePortalVisibility
 		compliancePortalID           *gid.GID
+		compliancePortalAuditIDs     []gid.GID
+		hasCompliancePortalAuditIDs  bool
 	}
 )
 
@@ -57,36 +59,37 @@ func (f *AuditFilter) WithCompliancePortalVisibilities(visibilities ...Complianc
 	return f
 }
 
+// withCompliancePortalAuditIDs pins the filter to the audits resolved from
+// trust_center_audits by the caller. Audit queries never join that table, so
+// the portal restriction is expressed as a plain identity predicate.
+func (f *AuditFilter) withCompliancePortalAuditIDs(auditIDs []gid.GID) *AuditFilter {
+	clone := *f
+	clone.compliancePortalAuditIDs = auditIDs
+	clone.hasCompliancePortalAuditIDs = true
+
+	return &clone
+}
+
+// SQLArguments only declares the arguments that SQLFragment actually
+// references. Callers merge them into a pgx.StrictNamedArgs, which rejects
+// arguments the query never uses.
 func (f *AuditFilter) SQLArguments() pgx.NamedArgs {
 	args := pgx.NamedArgs{}
 
-	if f.compliancePortalVisibilities != nil {
-		visibilities := make([]string, len(f.compliancePortalVisibilities))
-		for i, v := range f.compliancePortalVisibilities {
-			visibilities[i] = v.String()
-		}
-
-		args["trust_center_visibilities"] = visibilities
-	}
-
-	if f.compliancePortalID != nil {
-		args["compliance_portal_id"] = *f.compliancePortalID
+	if f.hasCompliancePortalAuditIDs {
+		args["compliance_portal_audit_ids"] = f.compliancePortalAuditIDs
 	}
 
 	return args
 }
 
 func (f *AuditFilter) SQLFragment() string {
-	if f.compliancePortalVisibilities != nil && f.compliancePortalID != nil {
-		return `EXISTS (
-			SELECT 1
-			FROM trust_center_audits tca
-			WHERE tca.audit_id = audits.id
-				AND tca.trust_center_id = @compliance_portal_id
-				AND tca.visibility = ANY(@trust_center_visibilities::trust_center_visibility[])
-		)`
+	if f.hasCompliancePortalAuditIDs {
+		return "audits.id = ANY(@compliance_portal_audit_ids)"
 	}
 
+	// A portal visibility filter that was never resolved against
+	// trust_center_audits cannot match anything.
 	if f.compliancePortalVisibilities != nil {
 		return "FALSE"
 	}

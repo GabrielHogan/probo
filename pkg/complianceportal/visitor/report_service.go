@@ -37,6 +37,7 @@ import (
 func (s *Service) GetReport(
 	ctx context.Context,
 	scope coredata.Scoper,
+	compliancePortalID gid.GID,
 	organizationID gid.GID,
 	fileID gid.GID,
 ) (*coredata.File, error) {
@@ -49,11 +50,12 @@ func (s *Service) GetReport(
 		return nil, ErrReportNotFound
 	}
 
-	// check the given report file ID is linked to an audit in order to avoid
-	// being able to get any file from the report request.
-	_, err = s.GetAuditByReportFileID(ctx, scope, fileID)
+	// check the given report file ID is linked to an audit published on this
+	// compliance page in order to avoid being able to get any file from the
+	// report request.
+	_, err = s.GetAuditByReportFileID(ctx, scope, compliancePortalID, fileID)
 	if err != nil {
-		if errors.Is(err, coredata.ErrResourceNotFound) {
+		if errors.Is(err, coredata.ErrResourceNotFound) || errors.Is(err, ErrReportNotFound) {
 			return nil, ErrReportNotFound
 		}
 

@@ -205,6 +205,7 @@ INSERT INTO
         tenant_id,
         id,
         organization_id,
+        trust_center_id,
         name,
         category,
         file_id,

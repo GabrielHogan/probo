@@ -19,35 +19,52 @@
 // SOFTWARE.
 
 import { usePageTitle } from "@probo/hooks";
-import { Badge, Button, Card, PageHeader } from "@probo/ui";
+import { Button, Card, IconChevronDown, PageHeader, Spinner } from "@probo/ui";
 import { useTranslation } from "react-i18next";
-import { type PreloadedQuery, usePreloadedQuery } from "react-relay";
-import { Link } from "react-router";
+import { type PreloadedQuery, usePaginationFragment, usePreloadedQuery } from "react-relay";
 import { graphql } from "relay-runtime";
 
-import type { CompliancePagesOverviewPageQuery } from "#/__generated__/core/CompliancePagesOverviewPageQuery.graphql";
+import type {
+  CompliancePagesOverviewPage_organization$key,
+} from "#/__generated__/core/CompliancePagesOverviewPage_organization.graphql";
+import type {
+  CompliancePagesOverviewPageQuery,
+} from "#/__generated__/core/CompliancePagesOverviewPageQuery.graphql";
+import type {
+  CompliancePagesOverviewPageRefetchQuery,
+} from "#/__generated__/core/CompliancePagesOverviewPageRefetchQuery.graphql";
 import { useOrganizationId } from "#/hooks/useOrganizationId";
 
 import { CompliancePortalEmptyState } from "./_components/CompliancePortalEmptyState";
+import { CompliancePortalListItem } from "./_components/CompliancePortalListItem";
 
 export const compliancePagesOverviewPageQuery = graphql`
   query CompliancePagesOverviewPageQuery($organizationId: ID!) {
     organization: node(id: $organizationId) {
       __typename
       ... on Organization {
-        compliancePortals(first: 50, orderBy: { field: CREATED_AT, direction: DESC })
-          @connection(key: "CompliancePagesOverviewPage_compliancePortals", filters: [])
-          @required(action: THROW) {
-          edges {
-            node {
-              id
-              entityName
-              slug
-              active
-              publicUrl
-              createdAt
-            }
-          }
+        ...CompliancePagesOverviewPage_organization
+      }
+    }
+  }
+`;
+
+const compliancePortalsFragment = graphql`
+  fragment CompliancePagesOverviewPage_organization on Organization
+  @refetchable(queryName: "CompliancePagesOverviewPageRefetchQuery")
+  @argumentDefinitions(
+    first: { type: "Int", defaultValue: 50 }
+    after: { type: "CursorKey", defaultValue: null }
+  ) {
+    compliancePortals(
+      first: $first
+      after: $after
+      orderBy: { field: CREATED_AT, direction: DESC }
+    ) @connection(key: "CompliancePagesOverviewPage_compliancePortals", filters: []) {
+      edges {
+        node {
+          id
+          ...CompliancePortalListItem_compliancePortal
         }
       }
     }
@@ -59,7 +76,7 @@ interface CompliancePagesOverviewPageProps {
 }
 
 export function CompliancePagesOverviewPage({ queryRef }: CompliancePagesOverviewPageProps) {
-  const { t, i18n } = useTranslation("organizations/compliance-pages");
+  const { t } = useTranslation("organizations/compliance-pages");
   const organizationId = useOrganizationId();
 
   usePageTitle(t("overviewPage.title"));
@@ -72,7 +89,12 @@ export function CompliancePagesOverviewPage({ queryRef }: CompliancePagesOvervie
     throw new Error("invalid type for node");
   }
 
-  const portals = organization.compliancePortals.edges.map(e => e.node);
+  const { data, hasNext, loadNext, isLoadingNext } = usePaginationFragment<
+    CompliancePagesOverviewPageRefetchQuery,
+    CompliancePagesOverviewPage_organization$key
+  >(compliancePortalsFragment, organization);
+
+  const portals = data.compliancePortals.edges.map(e => e.node);
   const newPortalHref = `/organizations/${organizationId}/compliance-pages/new`;
 
   if (portals.length === 0) {
@@ -103,28 +125,25 @@ export function CompliancePagesOverviewPage({ queryRef }: CompliancePagesOvervie
 
         <Card className="divide-y divide-border-low rounded-lg">
           {portals.map(portal => (
-            <Link
+            <CompliancePortalListItem
               key={portal.id}
-              to={`/organizations/${organizationId}/compliance-pages/${portal.id}`}
-              className="flex items-center justify-between gap-4 p-4 hover:bg-muted/50 transition-colors"
-            >
-              <div className="min-w-0 flex-1">
-                <div className="font-medium">{portal.entityName}</div>
-                <div className="text-sm text-muted-foreground truncate">{portal.publicUrl}</div>
-              </div>
-              <div className="flex items-center gap-3">
-                <Badge variant={portal.active ? "success" : "danger"}>
-                  {portal.active
-                    ? t("overviewPage.status.active")
-                    : t("overviewPage.status.inactive")}
-                </Badge>
-                <span className="text-xs text-muted-foreground">
-                  {new Date(portal.createdAt).toLocaleDateString(i18n.language)}
-                </span>
-              </div>
-            </Link>
+              compliancePortalKey={portal}
+            />
           ))}
         </Card>
+
+        {hasNext && (
+          <Button
+            variant="tertiary"
+            onClick={() => loadNext(50)}
+            disabled={isLoadingNext}
+            className="mt-3 mx-auto"
+            icon={IconChevronDown}
+          >
+            {isLoadingNext && <Spinner />}
+            {t("overviewPage.actions.showMore")}
+          </Button>
+        )}
       </div>
     </div>
   );

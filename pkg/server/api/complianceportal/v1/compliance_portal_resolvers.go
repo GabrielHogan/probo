@@ -60,9 +60,14 @@ func (r *auditResolver) ReportFile(ctx context.Context, obj *types.Audit) (*type
 
 	compliancePortal := complianceportal.CompliancePortalFromContext(ctx)
 
-	file, err := visitorService.GetReport(ctx, scope, compliancePortal.OrganizationID, *audit.ReportFileID)
+	file, err := visitorService.GetReport(ctx, scope, compliancePortal.ID, compliancePortal.OrganizationID, *audit.ReportFileID)
 	if err != nil {
+		if errors.Is(err, visitor.ErrReportNotFound) || errors.Is(err, coredata.ErrResourceNotFound) {
+			return nil, nil
+		}
+
 		r.logger.ErrorCtx(ctx, "cannot load report file", log.Error(err))
+
 		return nil, gqlutils.Internal(ctx)
 	}
 
@@ -80,9 +85,9 @@ func (r *auditReportResolver) IsUserAuthorized(ctx context.Context, obj *types.A
 	visitorService := r.visitor
 	compliancePortal := complianceportal.CompliancePortalFromContext(ctx)
 
-	audit, err := visitorService.GetAuditByReportFileID(ctx, scope, obj.ID)
+	audit, err := visitorService.GetAuditByReportFileID(ctx, scope, compliancePortal.ID, obj.ID)
 	if err != nil {
-		if errors.Is(err, coredata.ErrResourceNotFound) {
+		if errors.Is(err, coredata.ErrResourceNotFound) || errors.Is(err, visitor.ErrReportNotFound) {
 			return false, nil
 		}
 
@@ -342,10 +347,9 @@ func (r *compliancePortalResolver) Subprocessors(ctx context.Context, obj *types
 
 // SubprocessorCategories is the resolver for the subprocessorCategories field.
 func (r *compliancePortalResolver) SubprocessorCategories(ctx context.Context, obj *types.CompliancePortal) ([]coredata.ThirdPartyCategory, error) {
-	compliancePortal := complianceportal.CompliancePortalFromContext(ctx)
 	scope := coredata.NewScopeFromObjectID(obj.ID)
 
-	categories, err := r.visitor.ListDistinctPortalCategoriesForOrganizationID(ctx, scope, compliancePortal.OrganizationID)
+	categories, err := r.visitor.ListDistinctPortalCategoriesForPortalID(ctx, scope, obj.ID)
 	if err != nil {
 		r.logger.ErrorCtx(ctx, "cannot list subprocessor categories", log.Error(err))
 		return nil, gqlutils.Internal(ctx)
@@ -356,10 +360,9 @@ func (r *compliancePortalResolver) SubprocessorCategories(ctx context.Context, o
 
 // SubprocessorCountries is the resolver for the subprocessorCountries field.
 func (r *compliancePortalResolver) SubprocessorCountries(ctx context.Context, obj *types.CompliancePortal) ([]coredata.CountryCode, error) {
-	compliancePortal := complianceportal.CompliancePortalFromContext(ctx)
 	scope := coredata.NewScopeFromObjectID(obj.ID)
 
-	countries, err := r.visitor.ListDistinctPortalCountriesForOrganizationID(ctx, scope, compliancePortal.OrganizationID)
+	countries, err := r.visitor.ListDistinctPortalCountriesForPortalID(ctx, scope, obj.ID)
 	if err != nil {
 		r.logger.ErrorCtx(ctx, "cannot list subprocessor countries", log.Error(err))
 		return nil, gqlutils.Internal(ctx)
@@ -536,7 +539,7 @@ func (r *compliancePortalFileResolver) IsUserAuthorized(ctx context.Context, obj
 	visitorService := r.visitor
 	compliancePortal := complianceportal.CompliancePortalFromContext(ctx)
 
-	portalFile, err := visitorService.GetPortalFile(ctx, scope, compliancePortal.OrganizationID, obj.ID)
+	portalFile, err := visitorService.GetPortalFile(ctx, scope, compliancePortal.ID, compliancePortal.OrganizationID, obj.ID)
 	if err != nil {
 		if errors.Is(err, visitor.ErrPortalFileNotFound) || errors.Is(err, visitor.ErrPortalFileNotVisible) {
 			return false, gqlutils.NotFoundf(ctx, "compliance portal file %q not found", obj.ID)
@@ -639,7 +642,7 @@ func (r *documentResolver) IsUserAuthorized(ctx context.Context, obj *types.Docu
 	visitorService := r.visitor
 	compliancePortal := complianceportal.CompliancePortalFromContext(ctx)
 
-	document, err := visitorService.GetDocument(ctx, scope, compliancePortal.OrganizationID, obj.ID)
+	document, err := visitorService.GetDocument(ctx, scope, compliancePortal.ID, compliancePortal.OrganizationID, obj.ID)
 	if err != nil {
 		if errors.Is(err, visitor.ErrDocumentNotFound) || errors.Is(err, visitor.ErrDocumentNotVisible) || errors.Is(err, coredata.ErrResourceNotFound) {
 			return false, gqlutils.NotFoundf(ctx, "document %q not found", obj.ID)
@@ -762,7 +765,7 @@ func (r *mutationResolver) ExportDocumentPDF(ctx context.Context, input types.Ex
 	visitorService := r.visitor
 	compliancePortal := complianceportal.CompliancePortalFromContext(ctx)
 
-	document, err := visitorService.GetDocument(ctx, scope, compliancePortal.OrganizationID, input.DocumentID)
+	document, err := visitorService.GetDocument(ctx, scope, compliancePortal.ID, compliancePortal.OrganizationID, input.DocumentID)
 	if err != nil {
 		if errors.Is(err, visitor.ErrDocumentNotFound) || errors.Is(err, visitor.ErrDocumentNotVisible) || errors.Is(err, coredata.ErrResourceNotFound) {
 			return nil, gqlutils.NotFoundf(ctx, "document %q not found", input.DocumentID)
@@ -778,7 +781,7 @@ func (r *mutationResolver) ExportDocumentPDF(ctx context.Context, input types.Ex
 	}
 
 	if document.CompliancePortalVisibility == coredata.CompliancePortalVisibilityPublic {
-		pdf, err := visitorService.ExportDocumentPDFWithoutWatermark(ctx, scope, input.DocumentID)
+		pdf, err := visitorService.ExportDocumentPDFWithoutWatermark(ctx, scope, compliancePortal.ID, input.DocumentID)
 		if err != nil {
 			r.logger.ErrorCtx(ctx, "cannot export document PDF", log.Error(err))
 			return nil, gqlutils.Internal(ctx)
@@ -808,7 +811,7 @@ func (r *mutationResolver) ExportDocumentPDF(ctx context.Context, input types.Ex
 		return nil, gqlutils.Forbiddenf(ctx, "access denied: no permission to access this document")
 	}
 
-	pdf, err := visitorService.ExportDocumentPDF(ctx, scope, input.DocumentID, identity.EmailAddress)
+	pdf, err := visitorService.ExportDocumentPDF(ctx, scope, compliancePortal.ID, input.DocumentID, identity.EmailAddress)
 	if err != nil {
 		r.logger.ErrorCtx(ctx, "cannot export document PDF", log.Error(err))
 		return nil, gqlutils.Internal(ctx)
@@ -825,9 +828,14 @@ func (r *mutationResolver) ExportReportPDF(ctx context.Context, input types.Expo
 	visitorService := r.visitor
 	compliancePortal := complianceportal.CompliancePortalFromContext(ctx)
 
-	audit, err := visitorService.GetAuditByReportFileID(ctx, scope, input.ReportID)
+	audit, err := visitorService.GetAuditByReportFileID(ctx, scope, compliancePortal.ID, input.ReportID)
 	if err != nil {
+		if errors.Is(err, coredata.ErrResourceNotFound) || errors.Is(err, visitor.ErrReportNotFound) {
+			return nil, gqlutils.NotFoundf(ctx, "report %q not found", input.ReportID)
+		}
+
 		r.logger.ErrorCtx(ctx, "cannot load audit", log.Error(err))
+
 		return nil, gqlutils.Internal(ctx)
 	}
 
@@ -879,7 +887,7 @@ func (r *mutationResolver) ExportCompliancePortalFile(ctx context.Context, input
 	scope := coredata.NewScopeFromObjectID(compliancePortal.ID)
 	visitorService := r.visitor
 
-	portalFile, err := visitorService.GetPortalFile(ctx, scope, compliancePortal.OrganizationID, input.CompliancePortalFileID)
+	portalFile, err := visitorService.GetPortalFile(ctx, scope, compliancePortal.ID, compliancePortal.OrganizationID, input.CompliancePortalFileID)
 	if err != nil {
 		if errors.Is(err, visitor.ErrPortalFileNotFound) || errors.Is(err, visitor.ErrPortalFileNotVisible) {
 			return nil, gqlutils.NotFoundf(ctx, "compliance portal file %q not found", input.CompliancePortalFileID)
@@ -937,7 +945,7 @@ func (r *mutationResolver) RequestDocumentAccess(ctx context.Context, input type
 	scope := coredata.NewScopeFromObjectID(compliancePortal.ID)
 	visitorService := r.visitor
 
-	document, err := visitorService.GetDocument(ctx, scope, compliancePortal.OrganizationID, input.DocumentID)
+	document, err := visitorService.GetDocument(ctx, scope, compliancePortal.ID, compliancePortal.OrganizationID, input.DocumentID)
 	if err != nil {
 		if errors.Is(err, visitor.ErrDocumentNotFound) || errors.Is(err, visitor.ErrDocumentNotVisible) || errors.Is(err, coredata.ErrResourceNotFound) {
 			return nil, gqlutils.NotFoundf(ctx, "document %q not found", input.DocumentID)
@@ -990,9 +998,9 @@ func (r *mutationResolver) RequestReportAccess(ctx context.Context, input types.
 	scope := coredata.NewScopeFromObjectID(compliancePortal.ID)
 	visitorService := r.visitor
 
-	audit, err := visitorService.GetAuditByReportFileID(ctx, scope, input.ReportID)
+	audit, err := visitorService.GetAuditByReportFileID(ctx, scope, compliancePortal.ID, input.ReportID)
 	if err != nil {
-		if errors.Is(err, coredata.ErrResourceNotFound) {
+		if errors.Is(err, coredata.ErrResourceNotFound) || errors.Is(err, visitor.ErrReportNotFound) {
 			return nil, gqlutils.NotFoundf(ctx, "report %q not found", input.ReportID)
 		}
 
@@ -1039,7 +1047,7 @@ func (r *mutationResolver) RequestCompliancePortalFileAccess(ctx context.Context
 	scope := coredata.NewScopeFromObjectID(compliancePortal.ID)
 	visitorService := r.visitor
 
-	portalFile, err := visitorService.GetPortalFile(ctx, scope, compliancePortal.OrganizationID, input.CompliancePortalFileID)
+	portalFile, err := visitorService.GetPortalFile(ctx, scope, compliancePortal.ID, compliancePortal.OrganizationID, input.CompliancePortalFileID)
 	if err != nil {
 		if errors.Is(err, visitor.ErrPortalFileNotFound) || errors.Is(err, visitor.ErrPortalFileNotVisible) {
 			return nil, gqlutils.NotFoundf(ctx, "compliance portal file %q not found", input.CompliancePortalFileID)

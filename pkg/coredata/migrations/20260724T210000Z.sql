@@ -44,3 +44,8 @@ WHERE tc.organization_id = rr.organization_id
         FROM trust_centers tc2
         WHERE tc2.organization_id = rr.organization_id
     ) = 1;
+
+-- Portal-scoped rights-request history is looked up by (trust_center_id,
+-- contact); without this index that lookup degrades to a table scan.
+CREATE INDEX rights_requests_trust_center_id_contact_idx
+    ON rights_requests (trust_center_id, contact);

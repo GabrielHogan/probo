@@ -29,13 +29,15 @@ import type { CompliancePageDocumentList_organizationFragment$key } from "#/__ge
 import { CompliancePageDocumentListItem } from "./CompliancePageDocumentListItem";
 
 const organizationFragment = graphql`
-  fragment CompliancePageDocumentList_organizationFragment on Organization {
+  fragment CompliancePageDocumentList_organizationFragment on Organization
+  @argumentDefinitions(compliancePortalId: { type: "ID!" }) {
     documents(first: 100 filter: { status: [ACTIVE] }) {
       edges {
         node {
           id
           currentPublishedMajor
           ...CompliancePageDocumentListItem_documentFragment
+            @arguments(compliancePortalId: $compliancePortalId)
         }
       }
     }
@@ -49,6 +51,7 @@ const compliancePortalFragment = graphql`
 `;
 
 export function CompliancePageDocumentList(props: {
+  compliancePortalId: string;
   organizationRef: CompliancePageDocumentList_organizationFragment$key;
   compliancePortalRef: CompliancePageDocumentList_compliancePortalFragment$key;
 }) {
@@ -80,6 +83,7 @@ export function CompliancePageDocumentList(props: {
           {publishedDocuments.map(({ node: document }) => (
             <CompliancePageDocumentListItem
               key={document.id}
+              compliancePortalId={props.compliancePortalId}
               compliancePageFragmentRef={compliancePortal}
               documentFragmentRef={document}
             />

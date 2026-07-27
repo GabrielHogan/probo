@@ -26,9 +26,10 @@ import type { CompliancePageThirdPartiesPageQuery } from "#/__generated__/core/C
 import { CompliancePageThirdPartyList } from "./_components/CompliancePageThirdPartyList";
 
 export const compliancePageThirdPartiesPageQuery = graphql`
-  query CompliancePageThirdPartiesPageQuery($organizationId: ID!) {
+  query CompliancePageThirdPartiesPageQuery($compliancePortalId: ID!, $organizationId: ID!) {
     organization: node(id: $organizationId) {
       ...CompliancePageThirdPartyListFragment
+        @arguments(compliancePortalId: $compliancePortalId)
     }
   }
 `;
@@ -56,7 +57,10 @@ export function CompliancePageThirdPartiesPage(props: {
         </div>
       </div>
 
-      <CompliancePageThirdPartyList fragmentRef={organization} />
+      <CompliancePageThirdPartyList
+        compliancePortalId={queryRef.variables.compliancePortalId}
+        fragmentRef={organization}
+      />
     </div>
   );
 }

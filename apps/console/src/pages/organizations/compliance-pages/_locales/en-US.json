@@ -3,7 +3,7 @@
     "title": "Compliance Pages",
     "description": "Manage public compliance pages for your organization. Configure branding, documents, and access controls.",
     "status": { "active": "Active", "inactive": "Inactive" },
-    "actions": { "create": "Create compliance page", "createFirst": "Create your first compliance page" }
+    "actions": { "create": "Create compliance page", "createFirst": "Create your first compliance page", "showMore": "Show more" }
   },
   "portalEmptyState": {
     "title": "No compliance pages yet",
@@ -16,12 +16,8 @@
     "breadcrumb": { "root": "Compliance Pages", "current": "New" },
     "fields": { "entityName": { "label": "Entity name", "placeholder": "Acme Corp" } },
     "actions": { "create": "Create compliance page", "creating": "Creating..." },
-    "messages": {
-      "created": { "title": "Success", "description": "Compliance page created successfully" }
-    },
-    "errors": {
-      "create": { "title": "Error", "description": "Failed to create compliance page" }
-    }
+    "messages": { "created": "Compliance page created successfully" },
+    "errors": { "create": "Failed to create compliance page" }
   },
   "layout": {
     "title": "Compliance Page",

@@ -136,6 +136,68 @@ LIMIT 1;
 	return nil
 }
 
+// LoadDocumentVisibilitiesByCompliancePortalID returns the portal-scoped
+// visibility of every document attached to the portal, keyed by document ID.
+// When visibilities is non-empty the result is restricted to those
+// visibilities. Document loaders use it to resolve the set of documents
+// published on a portal without joining trust_center_documents from the
+// documents query.
+func LoadDocumentVisibilitiesByCompliancePortalID(
+	ctx context.Context,
+	conn pg.Querier,
+	scope Scoper,
+	compliancePortalID gid.GID,
+	visibilities []CompliancePortalVisibility,
+) (map[gid.GID]CompliancePortalVisibility, error) {
+	q := `
+SELECT
+	document_id,
+	visibility
+FROM
+	trust_center_documents
+WHERE
+	%s
+	AND trust_center_id = @trust_center_id
+	AND (@visibilities::trust_center_visibility[] IS NULL
+		OR visibility = ANY(@visibilities::trust_center_visibility[]));
+`
+
+	q = fmt.Sprintf(q, scope.SQLFragment())
+
+	args := pgx.StrictNamedArgs{
+		"trust_center_id": compliancePortalID,
+		"visibilities":    compliancePortalVisibilityStrings(visibilities),
+	}
+	maps.Copy(args, scope.SQLArguments())
+
+	rows, err := conn.Query(ctx, q, args)
+	if err != nil {
+		return nil, fmt.Errorf("cannot query trust center documents: %w", err)
+	}
+	defer rows.Close()
+
+	visibilityByDocumentID := map[gid.GID]CompliancePortalVisibility{}
+
+	for rows.Next() {
+		var (
+			documentID gid.GID
+			visibility CompliancePortalVisibility
+		)
+
+		if err := rows.Scan(&documentID, &visibility); err != nil {
+			return nil, fmt.Errorf("cannot scan trust center document: %w", err)
+		}
+
+		visibilityByDocumentID[documentID] = visibility
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("cannot collect trust center documents: %w", err)
+	}
+
+	return visibilityByDocumentID, nil
+}
+
 func (cpd *CompliancePortalDocument) Upsert(
 	ctx context.Context,
 	conn pg.Tx,
@@ -232,22 +294,22 @@ WHERE
 	return nil
 }
 
-func DeleteCompliancePortalDocumentsByDocumentID(
+func DeleteCompliancePortalDocumentsByDocumentIDs(
 	ctx context.Context,
 	conn pg.Tx,
 	scope Scoper,
-	documentID gid.GID,
+	documentIDs []gid.GID,
 ) error {
 	q := `
 DELETE FROM trust_center_documents
 WHERE
 	%s
-	AND document_id = @document_id
+	AND document_id = ANY(@document_ids)
 `
 
 	q = fmt.Sprintf(q, scope.SQLFragment())
 
-	args := pgx.StrictNamedArgs{"document_id": documentID}
+	args := pgx.StrictNamedArgs{"document_ids": documentIDs}
 	maps.Copy(args, scope.SQLArguments())
 
 	_, err := conn.Exec(ctx, q, args)

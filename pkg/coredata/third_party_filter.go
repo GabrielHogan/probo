@@ -21,18 +21,24 @@
 package coredata
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/jackc/pgx/v5"
+	"go.gearno.de/kit/pg"
 	"go.probo.inc/probo/pkg/gid"
 )
 
 type (
 	ThirdPartyFilter struct {
-		compliancePortalID     *gid.GID
-		showOnCompliancePortal *bool
-		level                  *int
-		query                  *string
-		category               *ThirdPartyCategory
-		country                *CountryCode
+		compliancePortalID               *gid.GID
+		compliancePortalThirdPartyIDs    []gid.GID
+		hasCompliancePortalThirdPartyIDs bool
+		showOnCompliancePortal           *bool
+		level                            *int
+		query                            *string
+		category                         *ThirdPartyCategory
+		country                          *CountryCode
 	}
 )
 
@@ -59,13 +65,55 @@ func (f *ThirdPartyFilter) WithCompliancePortalID(compliancePortalID gid.GID) *T
 	return &clone
 }
 
+// withCompliancePortalThirdPartyIDs pins the filter to the third parties
+// resolved from trust_center_third_parties by the caller. Third-party queries
+// never join that table, so the portal restriction is expressed as a plain
+// identity predicate.
+func (f *ThirdPartyFilter) withCompliancePortalThirdPartyIDs(thirdPartyIDs []gid.GID) *ThirdPartyFilter {
+	clone := *f
+	clone.compliancePortalThirdPartyIDs = thirdPartyIDs
+	clone.hasCompliancePortalThirdPartyIDs = true
+
+	return &clone
+}
+
+// resolveCompliancePortal turns a "published on this portal" request into the
+// concrete third-party IDs backing it. Loaders call it before building their
+// query so that no third-party query has to reach into the portal tables.
+func (f *ThirdPartyFilter) resolveCompliancePortal(
+	ctx context.Context,
+	conn pg.Querier,
+	scope Scoper,
+) (*ThirdPartyFilter, error) {
+	if f.compliancePortalID == nil || f.showOnCompliancePortal == nil || !*f.showOnCompliancePortal {
+		return f, nil
+	}
+
+	thirdPartyIDs, err := LoadThirdPartyIDsByCompliancePortalID(ctx, conn, scope, *f.compliancePortalID)
+	if err != nil {
+		return nil, fmt.Errorf("cannot load compliance portal third parties: %w", err)
+	}
+
+	return f.withCompliancePortalThirdPartyIDs(thirdPartyIDs), nil
+}
+
 func (f *ThirdPartyFilter) SQLArguments() pgx.StrictNamedArgs {
 	args := pgx.StrictNamedArgs{
-		"show_on_trust_center": nil,
-		"filter_query":         nil,
-		"level":                nil,
-		"filter_category":      nil,
-		"filter_country":       nil,
+		"compliance_portal_third_party_ids": nil,
+		"show_on_trust_center":              nil,
+		"filter_query":                      nil,
+		"level":                             nil,
+		"filter_category":                   nil,
+		"filter_country":                    nil,
+	}
+
+	if f.hasCompliancePortalThirdPartyIDs {
+		ids := make([]string, len(f.compliancePortalThirdPartyIDs))
+		for i, id := range f.compliancePortalThirdPartyIDs {
+			ids[i] = id.String()
+		}
+
+		args["compliance_portal_third_party_ids"] = ids
 	}
 
 	if f.showOnCompliancePortal != nil {
@@ -88,10 +136,6 @@ func (f *ThirdPartyFilter) SQLArguments() pgx.StrictNamedArgs {
 		args["filter_country"] = string(*f.country)
 	}
 
-	if f.compliancePortalID != nil {
-		args["compliance_portal_id"] = *f.compliancePortalID
-	}
-
 	return args
 }
 
@@ -99,13 +143,10 @@ func (f *ThirdPartyFilter) SQLFragment() string {
 	return `
 (
 	CASE
-		WHEN @compliance_portal_id::text IS NOT NULL AND @show_on_trust_center::boolean IS TRUE THEN
-			EXISTS (
-				SELECT 1
-				FROM trust_center_third_parties tctp
-				WHERE tctp.third_party_id = third_parties.id
-					AND tctp.trust_center_id = @compliance_portal_id
-			)
+		WHEN @compliance_portal_third_party_ids::text[] IS NOT NULL THEN
+			third_parties.id = ANY(@compliance_portal_third_party_ids::text[])
+		-- A portal publication filter that was never resolved against
+		-- trust_center_third_parties cannot match anything.
 		WHEN @show_on_trust_center::boolean IS NOT NULL THEN
 			FALSE
 		ELSE TRUE

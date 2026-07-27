@@ -253,10 +253,18 @@ func (s *Service) Create(
 
 			var insertErr error
 
+			// Each attempt runs in its own savepoint: a slug collision
+			// aborts only the failed INSERT and leaves the surrounding
+			// transaction usable for the next attempt.
 			for range maxSlugAttempts {
 				portal.Slug = slug.MakeWithEntropy(req.EntityName)
 
-				insertErr = portal.Insert(ctx, tx, scope)
+				insertErr = tx.Savepoint(
+					ctx,
+					func(ctx context.Context, sp pg.Tx) error {
+						return portal.Insert(ctx, sp, scope)
+					},
+				)
 				if insertErr == nil {
 					break
 				}

@@ -13,7 +13,9 @@ import (
 	pgx "github.com/jackc/pgx/v5"
 	"github.com/vikstrous/dataloadgen"
 	"go.gearno.de/kit/log"
+	"go.probo.inc/probo/pkg/complianceportal/management"
 	"go.probo.inc/probo/pkg/coredata"
+	"go.probo.inc/probo/pkg/gid"
 	"go.probo.inc/probo/pkg/iam"
 	"go.probo.inc/probo/pkg/page"
 	"go.probo.inc/probo/pkg/probo"
@@ -142,7 +144,6 @@ func (r *mutationResolver) UpdateThirdParty(ctx context.Context, input types.Upd
 			Certifications:                input.Certifications,
 			BusinessOwnerID:               gqlutils.UnwrapOmittable(input.BusinessOwnerID),
 			SecurityOwnerID:               gqlutils.UnwrapOmittable(input.SecurityOwnerID),
-			ShowOnCompliancePortal:        input.ShowOnCompliancePortal,
 			Countries:                     input.Countries,
 		},
 	)
@@ -905,6 +906,23 @@ func (r *thirdPartyResolver) SecurityOwner(ctx context.Context, obj *types.Third
 	}
 
 	return types.NewProfile(securityOwner), nil
+}
+
+// CompliancePortalPublished is the resolver for the compliancePortalPublished field.
+func (r *thirdPartyResolver) CompliancePortalPublished(ctx context.Context, obj *types.ThirdParty, compliancePortalID gid.GID) (bool, error) {
+	scope, err := r.authorize(ctx, compliancePortalID, management.ActionCompliancePortalGet)
+	if err != nil {
+		return false, err
+	}
+
+	published, err := r.management.IsThirdPartyPublished(ctx, scope, compliancePortalID, obj.ID)
+	if err != nil {
+		r.logger.ErrorCtx(ctx, "cannot load compliance portal third party", log.Error(err))
+
+		return false, gqlutils.Internal(ctx)
+	}
+
+	return published, nil
 }
 
 // ParentThirdParty is the resolver for the parentThirdParty field.

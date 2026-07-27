@@ -13,6 +13,7 @@ import (
 
 	"github.com/vikstrous/dataloadgen"
 	"go.gearno.de/kit/log"
+	"go.probo.inc/probo/pkg/complianceportal/management"
 	"go.probo.inc/probo/pkg/coredata"
 	"go.probo.inc/probo/pkg/gid"
 	"go.probo.inc/probo/pkg/iam"
@@ -27,6 +28,23 @@ import (
 	"go.probo.inc/probo/pkg/server/gqlutils"
 	"go.probo.inc/probo/pkg/validator"
 )
+
+// CompliancePortalVisibility is the resolver for the compliancePortalVisibility field.
+func (r *documentResolver) CompliancePortalVisibility(ctx context.Context, obj *types.Document, compliancePortalID gid.GID) (coredata.CompliancePortalVisibility, error) {
+	scope, err := r.authorize(ctx, compliancePortalID, management.ActionCompliancePortalGet)
+	if err != nil {
+		return "", err
+	}
+
+	visibility, err := r.management.GetDocumentVisibility(ctx, scope, compliancePortalID, obj.ID)
+	if err != nil {
+		r.logger.ErrorCtx(ctx, "cannot load compliance portal document visibility", log.Error(err))
+
+		return "", gqlutils.Internal(ctx)
+	}
+
+	return visibility, nil
+}
 
 // Alias is the resolver for the alias field.
 func (r *documentResolver) Alias(ctx context.Context, obj *types.Document) (*string, error) {
@@ -847,13 +865,12 @@ func (r *mutationResolver) CreateDocument(ctx context.Context, input types.Creat
 	document, documentVersion, err := r.probo.Documents.Create(
 		ctx, scope,
 		probo.CreateDocumentRequest{
-			OrganizationID:             input.OrganizationID,
-			Title:                      input.Title,
-			Content:                    content,
-			Classification:             input.Classification,
-			DocumentType:               input.DocumentType,
-			CompliancePortalVisibility: input.CompliancePortalVisibility,
-			DefaultApproverIDs:         input.DefaultApproverIds,
+			OrganizationID:     input.OrganizationID,
+			Title:              input.Title,
+			Content:            content,
+			Classification:     input.Classification,
+			DocumentType:       input.DocumentType,
+			DefaultApproverIDs: input.DefaultApproverIds,
 		},
 	)
 	if err != nil {
@@ -891,13 +908,12 @@ func (r *mutationResolver) UpdateDocument(ctx context.Context, input types.Updat
 	document, documentVersion, draftCreated, err := r.probo.Documents.Update(
 		ctx, scope,
 		probo.UpdateDocumentRequest{
-			DocumentID:                 input.ID,
-			Title:                      input.Title,
-			Content:                    input.Content,
-			Classification:             input.Classification,
-			DocumentType:               input.DocumentType,
-			CompliancePortalVisibility: input.CompliancePortalVisibility,
-			DefaultApproverIDs:         defaultApproverIDs,
+			DocumentID:         input.ID,
+			Title:              input.Title,
+			Content:            input.Content,
+			Classification:     input.Classification,
+			DocumentType:       input.DocumentType,
+			DefaultApproverIDs: defaultApproverIDs,
 		},
 	)
 	if err != nil {

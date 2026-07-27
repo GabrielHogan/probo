@@ -29,12 +29,14 @@ import type { CompliancePageAuditList_organizationFragment$key } from "#/__gener
 import { CompliancePageAuditListItem } from "./CompliancePageAuditListItem";
 
 const organizationFragment = graphql`
-  fragment CompliancePageAuditList_organizationFragment on Organization {
+  fragment CompliancePageAuditList_organizationFragment on Organization
+  @argumentDefinitions(compliancePortalId: { type: "ID!" }) {
     audits(first: 100) {
       edges {
         node {
           id
           ...CompliancePageAuditListItem_auditFragment
+            @arguments(compliancePortalId: $compliancePortalId)
         }
       }
     }
@@ -48,6 +50,7 @@ const compliancePortalFragment = graphql`
 `;
 
 export function CompliancePageAuditList(props: {
+  compliancePortalId: string;
   organizationRef: CompliancePageAuditList_organizationFragment$key;
   compliancePortalRef: CompliancePageAuditList_compliancePortalFragment$key;
 }) {
@@ -79,6 +82,7 @@ export function CompliancePageAuditList(props: {
           {audits.edges.map(({ node: audit }) => (
             <CompliancePageAuditListItem
               key={audit.id}
+              compliancePortalId={props.compliancePortalId}
               auditFragmentRef={audit}
               compliancePageFragmentRef={compliancePortal}
             />

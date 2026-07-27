@@ -36,6 +36,9 @@ import * as getAllCommitmentsOp from './getAllCommitments.operation';
 import * as createCommitmentOp from './createCommitment.operation';
 import * as updateCommitmentOp from './updateCommitment.operation';
 import * as deleteCommitmentOp from './deleteCommitment.operation';
+import * as updateDocumentVisibilityOp from './updateDocumentVisibility.operation';
+import * as updateAuditVisibilityOp from './updateAuditVisibility.operation';
+import * as updateThirdPartyPublishedOp from './updateThirdPartyPublished.operation';
 
 export const description: INodeProperties[] = [
 	{
@@ -140,6 +143,12 @@ export const description: INodeProperties[] = [
 				action: 'Update compliance portal settings',
 			},
 			{
+				name: 'Update Audit Visibility',
+				value: 'updateAuditVisibility',
+				description: 'Update the visibility of an audit on a compliance portal',
+				action: 'Update an audit visibility on a compliance portal',
+			},
+			{
 				name: 'Update Commitment',
 				value: 'updateCommitment',
 				description: 'Update a compliance portal commitment',
@@ -150,6 +159,18 @@ export const description: INodeProperties[] = [
 				value: 'updateCommitmentGroup',
 				description: 'Update a compliance portal commitment group',
 				action: 'Update a compliance portal commitment group',
+			},
+			{
+				name: 'Update Document Visibility',
+				value: 'updateDocumentVisibility',
+				description: 'Update the visibility of a document on a compliance portal',
+				action: 'Update a document visibility on a compliance portal',
+			},
+			{
+				name: 'Update Third Party Published',
+				value: 'updateThirdPartyPublished',
+				description: 'Publish or unpublish a third party on a compliance portal',
+				action: 'Update a third party published state on a compliance portal',
 			},
 		],
 		default: 'get',
@@ -171,6 +192,9 @@ export const description: INodeProperties[] = [
 	...createCommitmentOp.description,
 	...updateCommitmentOp.description,
 	...deleteCommitmentOp.description,
+	...updateDocumentVisibilityOp.description,
+	...updateAuditVisibilityOp.description,
+	...updateThirdPartyPublishedOp.description,
 ];
 
 export {
@@ -191,4 +215,7 @@ export {
 	createCommitmentOp as createCommitment,
 	updateCommitmentOp as updateCommitment,
 	deleteCommitmentOp as deleteCommitment,
+	updateDocumentVisibilityOp as updateDocumentVisibility,
+	updateAuditVisibilityOp as updateAuditVisibility,
+	updateThirdPartyPublishedOp as updateThirdPartyPublished,
 };

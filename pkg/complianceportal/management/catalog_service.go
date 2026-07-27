@@ -22,7 +22,6 @@ package management
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -258,10 +257,6 @@ func (s *Service) UpdateThirdPartyPublished(
 			}
 
 			if err := row.Insert(ctx, tx, scope); err != nil {
-				if errors.Is(err, coredata.ErrResourceAlreadyExists) {
-					return nil
-				}
-
 				return fmt.Errorf("cannot publish third party on portal: %w", err)
 			}
 

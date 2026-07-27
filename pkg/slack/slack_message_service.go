@@ -66,18 +66,37 @@ type (
 	}
 
 	SlackMessageMetadata struct {
-		Documents []SlackMessageDocument
-		Reports   []SlackMessageReport
-		Files     []SlackMessageFile
+		CompliancePortalID gid.GID
+		Documents          []SlackMessageDocument
+		Reports            []SlackMessageReport
+		Files              []SlackMessageFile
 	}
 )
 
 func (m SlackMessageMetadata) toMap() map[string]any {
 	return map[string]any{
-		"documents": m.Documents,
-		"reports":   m.Reports,
-		"files":     m.Files,
+		"compliance_portal_id": m.CompliancePortalID.String(),
+		"documents":            m.Documents,
+		"reports":              m.Reports,
+		"files":                m.Files,
 	}
+}
+
+// compliancePortalIDFromMetadata reads the portal a message was raised for.
+// Messages created before organizations could own several portals do not carry
+// it, so callers must fall back to resolving the portal another way.
+func compliancePortalIDFromMetadata(metadata map[string]any) (gid.GID, bool) {
+	raw, ok := metadata["compliance_portal_id"].(string)
+	if !ok || raw == "" {
+		return gid.Nil, false
+	}
+
+	portalID, err := gid.ParseGID(raw)
+	if err != nil {
+		return gid.Nil, false
+	}
+
+	return portalID, true
 }
 
 func (s *Service) GetSlackMessageDocumentIDs(
@@ -124,7 +143,16 @@ func (s *Service) UpdateSlackAccessMessage(
 			}
 
 			var compliancePortal coredata.CompliancePortal
-			if err := compliancePortal.LoadByOrganizationID(ctx, tx, scope, slackMessage.OrganizationID); err != nil {
+
+			if portalID, ok := compliancePortalIDFromMetadata(slackMessage.Metadata); ok {
+				if err := compliancePortal.LoadByID(ctx, tx, scope, portalID); err != nil {
+					if errors.Is(err, coredata.ErrResourceNotFound) {
+						return nil
+					}
+
+					return fmt.Errorf("cannot load compliance portal by id: %w", err)
+				}
+			} else if err := compliancePortal.LoadByOrganizationID(ctx, tx, scope, slackMessage.OrganizationID); err != nil {
 				if errors.Is(err, coredata.ErrResourceNotFound) {
 					return nil
 				}
@@ -142,7 +170,7 @@ func (s *Service) UpdateSlackAccessMessage(
 				return fmt.Errorf("cannot load compliance portal access: %w", err)
 			}
 
-			documents, reports, files, err := s.loadDocumentsReportsAndFilesFromAccesses(ctx, tx, scope, compliancePortalAccess.ID)
+			documents, reports, files, err := s.loadDocumentsReportsAndFilesFromAccesses(ctx, tx, scope, compliancePortal.ID, compliancePortalAccess.ID)
 			if err != nil {
 				return err
 			}
@@ -163,9 +191,10 @@ func (s *Service) UpdateSlackAccessMessage(
 			}
 
 			metadata := SlackMessageMetadata{
-				Documents: documents,
-				Reports:   reports,
-				Files:     files,
+				CompliancePortalID: compliancePortal.ID,
+				Documents:          documents,
+				Reports:            reports,
+				Files:              files,
 			}
 
 			now := time.Now()
@@ -246,7 +275,7 @@ func (s *Service) QueueSlackNotification(
 			return ErrNoSlackConnector
 		}
 
-		documents, reports, files, err := s.loadDocumentsReportsAndFilesFromAccesses(ctx, tx, scope, compliancePortalAccess.ID)
+		documents, reports, files, err := s.loadDocumentsReportsAndFilesFromAccesses(ctx, tx, scope, compliancePortalID, compliancePortalAccess.ID)
 		if err != nil {
 			return fmt.Errorf("cannot load documents, reports and files: %w", err)
 		}
@@ -267,9 +296,10 @@ func (s *Service) QueueSlackNotification(
 		}
 
 		metadata := SlackMessageMetadata{
-			Documents: documents,
-			Reports:   reports,
-			Files:     files,
+			CompliancePortalID: compliancePortalID,
+			Documents:          documents,
+			Reports:            reports,
+			Files:              files,
 		}
 
 		now := time.Now()
@@ -327,6 +357,7 @@ func (s *Service) loadDocumentsReportsAndFilesFromAccesses(
 	ctx context.Context,
 	conn pg.Querier,
 	scope coredata.Scoper,
+	compliancePortalID gid.GID,
 	compliancePortalAccessID gid.GID,
 ) (
 	documents []SlackMessageDocument,
@@ -364,7 +395,22 @@ func (s *Service) loadDocumentsReportsAndFilesFromAccesses(
 				return nil, nil, nil, fmt.Errorf("cannot load document: %w", err)
 			}
 
-			if doc.CurrentPublishedMajor == nil || doc.CompliancePortalVisibility == coredata.CompliancePortalVisibilityNone {
+			if doc.CurrentPublishedMajor == nil {
+				continue
+			}
+
+			portalDocument := &coredata.CompliancePortalDocument{}
+
+			err := portalDocument.LoadByCompliancePortalIDAndDocumentID(ctx, conn, scope, compliancePortalID, *access.DocumentID)
+			if err != nil {
+				if errors.Is(err, coredata.ErrResourceNotFound) {
+					continue
+				}
+
+				return nil, nil, nil, fmt.Errorf("cannot load compliance portal document: %w", err)
+			}
+
+			if portalDocument.Visibility == coredata.CompliancePortalVisibilityNone {
 				continue
 			}
 

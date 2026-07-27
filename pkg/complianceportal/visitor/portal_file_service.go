@@ -37,6 +37,7 @@ import (
 func (s *Service) GetPortalFile(
 	ctx context.Context,
 	scope coredata.Scoper,
+	compliancePortalID gid.GID,
 	organizationID gid.GID,
 	compliancePortalFileID gid.GID,
 ) (*coredata.CompliancePortalFile, error) {
@@ -58,6 +59,10 @@ func (s *Service) GetPortalFile(
 	}
 
 	if compliancePortalFile.OrganizationID != organizationID {
+		return nil, ErrPortalFileNotFound
+	}
+
+	if compliancePortalFile.CompliancePortalID != compliancePortalID {
 		return nil, ErrPortalFileNotFound
 	}
 

@@ -28,7 +28,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"go.gearno.de/kit/pg"
 	"go.probo.inc/probo/pkg/gid"
 	"go.probo.inc/probo/pkg/iam/policy"
@@ -107,6 +106,7 @@ INSERT INTO trust_center_third_parties (
 	@created_at,
 	@updated_at
 )
+ON CONFLICT (trust_center_id, third_party_id) DO NOTHING
 `
 
 	args := pgx.StrictNamedArgs{
@@ -121,14 +121,48 @@ INSERT INTO trust_center_third_parties (
 
 	_, err := conn.Exec(ctx, q, args)
 	if err != nil {
-		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == "23505" && pgErr.ConstraintName == "trust_center_third_parties_trust_center_id_third_party_id_key" {
-			return ErrResourceAlreadyExists
-		}
-
 		return fmt.Errorf("cannot insert trust center third party: %w", err)
 	}
 
 	return nil
+}
+
+// LoadThirdPartyIDsByCompliancePortalID returns the IDs of every third party
+// published on the portal. Third-party loaders use it to resolve the portal
+// publication predicate without joining trust_center_third_parties from the
+// third_parties query.
+func LoadThirdPartyIDsByCompliancePortalID(
+	ctx context.Context,
+	conn pg.Querier,
+	scope Scoper,
+	compliancePortalID gid.GID,
+) ([]gid.GID, error) {
+	q := `
+SELECT
+	third_party_id
+FROM
+	trust_center_third_parties
+WHERE
+	%s
+	AND trust_center_id = @trust_center_id;
+`
+
+	q = fmt.Sprintf(q, scope.SQLFragment())
+
+	args := pgx.StrictNamedArgs{"trust_center_id": compliancePortalID}
+	maps.Copy(args, scope.SQLArguments())
+
+	rows, err := conn.Query(ctx, q, args)
+	if err != nil {
+		return nil, fmt.Errorf("cannot query trust center third parties: %w", err)
+	}
+
+	thirdPartyIDs, err := pgx.CollectRows(rows, pgx.RowTo[gid.GID])
+	if err != nil {
+		return nil, fmt.Errorf("cannot collect trust center third parties: %w", err)
+	}
+
+	return thirdPartyIDs, nil
 }
 
 func DeleteCompliancePortalThirdPartyByCompliancePortalIDAndThirdPartyID(

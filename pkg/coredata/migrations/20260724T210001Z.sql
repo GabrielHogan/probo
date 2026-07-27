@@ -27,18 +27,36 @@ ALTER TABLE trust_center_accesses
 ALTER TABLE trust_center_files
     ADD COLUMN trust_center_id TEXT REFERENCES trust_centers(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
+-- Attach every existing file to its organization's oldest trust center. Files
+-- predate multi-portal support, so the oldest portal is the one they were
+-- uploaded through; an administrator can move them afterwards. Deleting the
+-- rows instead would also cascade away their trust_center_document_accesses.
 UPDATE trust_center_files tcf
-SET trust_center_id = tc.id
-FROM trust_centers tc
-WHERE tc.organization_id = tcf.organization_id
-    AND (
-        SELECT COUNT(*)
-        FROM trust_centers tc2
-        WHERE tc2.organization_id = tcf.organization_id
-    ) = 1;
+SET trust_center_id = (
+    SELECT tc.id
+    FROM trust_centers tc
+    WHERE tc.organization_id = tcf.organization_id
+    ORDER BY tc.created_at ASC, tc.id ASC
+    LIMIT 1
+);
 
-DELETE FROM trust_center_files
-WHERE trust_center_id IS NULL;
+-- Files whose organization has no trust center at all cannot satisfy the
+-- foreign key. Fail loudly rather than silently destroying them.
+DO $$
+DECLARE
+    orphan_count BIGINT;
+BEGIN
+    SELECT COUNT(*) INTO orphan_count
+    FROM trust_center_files
+    WHERE trust_center_id IS NULL;
+
+    IF orphan_count > 0 THEN
+        RAISE EXCEPTION
+            'cannot backfill trust_center_files.trust_center_id: % file(s) belong to an organization with no trust center; assign them to a trust center before re-running this migration',
+            orphan_count;
+    END IF;
+END
+$$;
 
 ALTER TABLE trust_center_files
     ALTER COLUMN trust_center_id SET NOT NULL;

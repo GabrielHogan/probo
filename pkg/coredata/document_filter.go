@@ -27,16 +27,18 @@ import (
 
 type (
 	DocumentFilter struct {
-		query                        *string
-		compliancePortalVisibilities []CompliancePortalVisibility
-		compliancePortalID           *gid.GID
-		published                    *bool
-		employeeIdentityID           *gid.GID
-		employeeFilterModes          []EmployeeFilterMode
-		documentTypes                []DocumentType
-		classifications              []DocumentClassification
-		writeModes                   []DocumentWriteMode
-		status                       []DocumentStatus
+		query                          *string
+		compliancePortalVisibilities   []CompliancePortalVisibility
+		compliancePortalID             *gid.GID
+		compliancePortalDocumentIDs    []gid.GID
+		hasCompliancePortalDocumentIDs bool
+		published                      *bool
+		employeeIdentityID             *gid.GID
+		employeeFilterModes            []EmployeeFilterMode
+		documentTypes                  []DocumentType
+		classifications                []DocumentClassification
+		writeModes                     []DocumentWriteMode
+		status                         []DocumentStatus
 	}
 )
 
@@ -74,6 +76,17 @@ func (f *DocumentFilter) WithCompliancePortalID(compliancePortalID gid.GID) *Doc
 func (f *DocumentFilter) WithCompliancePortalVisibilities(visibilities ...CompliancePortalVisibility) *DocumentFilter {
 	f.compliancePortalVisibilities = visibilities
 	return f
+}
+
+// withCompliancePortalDocumentIDs pins the filter to the documents resolved
+// from trust_center_documents by the caller. Document queries never join that
+// table, so the portal restriction is expressed as a plain identity predicate.
+func (f *DocumentFilter) withCompliancePortalDocumentIDs(documentIDs []gid.GID) *DocumentFilter {
+	clone := *f
+	clone.compliancePortalDocumentIDs = documentIDs
+	clone.hasCompliancePortalDocumentIDs = true
+
+	return &clone
 }
 
 func (f *DocumentFilter) WithEmployeeIdentityID(identityID *gid.GID, modes ...EmployeeFilterMode) *DocumentFilter {
@@ -149,17 +162,25 @@ func (f *DocumentFilter) SQLArguments() pgx.NamedArgs {
 		employeeFilterModes = append(employeeFilterModes, string(m))
 	}
 
+	var compliancePortalDocumentIDs []string
+	if f.hasCompliancePortalDocumentIDs {
+		compliancePortalDocumentIDs = make([]string, len(f.compliancePortalDocumentIDs))
+		for i, id := range f.compliancePortalDocumentIDs {
+			compliancePortalDocumentIDs[i] = id.String()
+		}
+	}
+
 	return pgx.NamedArgs{
-		"query":                     f.query,
-		"trust_center_visibilities": visibilities,
-		"compliance_portal_id":      f.compliancePortalID,
-		"published":                 f.published,
-		"employee_identity_id":      f.employeeIdentityID,
-		"employee_filter_modes":     employeeFilterModes,
-		"document_types":            documentTypes,
-		"classifications":           classifications,
-		"write_modes":               writeModes,
-		"document_status":           status,
+		"query":                          f.query,
+		"trust_center_visibilities":      visibilities,
+		"compliance_portal_document_ids": compliancePortalDocumentIDs,
+		"published":                      f.published,
+		"employee_identity_id":           f.employeeIdentityID,
+		"employee_filter_modes":          employeeFilterModes,
+		"document_types":                 documentTypes,
+		"classifications":                classifications,
+		"write_modes":                    writeModes,
+		"document_status":                status,
 	}
 }
 
@@ -182,14 +203,10 @@ func (f *DocumentFilter) SQLFragment() string {
 	END
 	AND
 	CASE
-		WHEN @compliance_portal_id::text IS NOT NULL AND @trust_center_visibilities::trust_center_visibility[] IS NOT NULL THEN
-			EXISTS (
-				SELECT 1
-				FROM trust_center_documents tcd
-				WHERE tcd.document_id = documents.id
-					AND tcd.trust_center_id = @compliance_portal_id
-					AND tcd.visibility = ANY(@trust_center_visibilities::trust_center_visibility[])
-			)
+		WHEN @compliance_portal_document_ids::text[] IS NOT NULL THEN
+			documents.id = ANY(@compliance_portal_document_ids::text[])
+		-- A portal visibility filter that was never resolved against
+		-- trust_center_documents cannot match anything.
 		WHEN @trust_center_visibilities::trust_center_visibility[] IS NOT NULL THEN
 			FALSE
 		ELSE TRUE

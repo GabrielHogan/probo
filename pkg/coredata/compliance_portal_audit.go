@@ -136,6 +136,67 @@ LIMIT 1;
 	return nil
 }
 
+// LoadAuditVisibilitiesByCompliancePortalID returns the portal-scoped
+// visibility of every audit attached to the portal, keyed by audit ID. When
+// visibilities is non-empty the result is restricted to those visibilities.
+// Audit loaders use it to resolve the set of audits published on a portal
+// without joining trust_center_audits from the audits query.
+func LoadAuditVisibilitiesByCompliancePortalID(
+	ctx context.Context,
+	conn pg.Querier,
+	scope Scoper,
+	compliancePortalID gid.GID,
+	visibilities []CompliancePortalVisibility,
+) (map[gid.GID]CompliancePortalVisibility, error) {
+	q := `
+SELECT
+	audit_id,
+	visibility
+FROM
+	trust_center_audits
+WHERE
+	%s
+	AND trust_center_id = @trust_center_id
+	AND (@visibilities::trust_center_visibility[] IS NULL
+		OR visibility = ANY(@visibilities::trust_center_visibility[]));
+`
+
+	q = fmt.Sprintf(q, scope.SQLFragment())
+
+	args := pgx.StrictNamedArgs{
+		"trust_center_id": compliancePortalID,
+		"visibilities":    compliancePortalVisibilityStrings(visibilities),
+	}
+	maps.Copy(args, scope.SQLArguments())
+
+	rows, err := conn.Query(ctx, q, args)
+	if err != nil {
+		return nil, fmt.Errorf("cannot query trust center audits: %w", err)
+	}
+	defer rows.Close()
+
+	visibilityByAuditID := map[gid.GID]CompliancePortalVisibility{}
+
+	for rows.Next() {
+		var (
+			auditID    gid.GID
+			visibility CompliancePortalVisibility
+		)
+
+		if err := rows.Scan(&auditID, &visibility); err != nil {
+			return nil, fmt.Errorf("cannot scan trust center audit: %w", err)
+		}
+
+		visibilityByAuditID[auditID] = visibility
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("cannot collect trust center audits: %w", err)
+	}
+
+	return visibilityByAuditID, nil
+}
+
 func (cpa *CompliancePortalAudit) Upsert(
 	ctx context.Context,
 	conn pg.Tx,

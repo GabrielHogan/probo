@@ -122,10 +122,10 @@ func (s *Service) ListThirdPartiesForOrganizationID(
 	return page.NewPage(thirdParties, cursor), nil
 }
 
-func (s *Service) ListDistinctPortalCategoriesForOrganizationID(
+func (s *Service) ListDistinctPortalCategoriesForPortalID(
 	ctx context.Context,
 	scope coredata.Scoper,
-	organizationID gid.GID,
+	compliancePortalID gid.GID,
 ) ([]coredata.ThirdPartyCategory, error) {
 	var categories []coredata.ThirdPartyCategory
 
@@ -134,7 +134,7 @@ func (s *Service) ListDistinctPortalCategoriesForOrganizationID(
 		func(ctx context.Context, conn pg.Querier) error {
 			thirdParties := &coredata.ThirdParties{}
 
-			result, err := thirdParties.LoadDistinctCompliancePortalCategoriesByOrganizationID(ctx, conn, scope, organizationID)
+			result, err := thirdParties.LoadDistinctCompliancePortalCategoriesByCompliancePortalID(ctx, conn, scope, compliancePortalID)
 			if err != nil {
 				return fmt.Errorf("cannot load thirdParty categories: %w", err)
 			}
@@ -151,10 +151,10 @@ func (s *Service) ListDistinctPortalCategoriesForOrganizationID(
 	return categories, nil
 }
 
-func (s *Service) ListDistinctPortalCountriesForOrganizationID(
+func (s *Service) ListDistinctPortalCountriesForPortalID(
 	ctx context.Context,
 	scope coredata.Scoper,
-	organizationID gid.GID,
+	compliancePortalID gid.GID,
 ) ([]coredata.CountryCode, error) {
 	var countries []coredata.CountryCode
 
@@ -163,7 +163,7 @@ func (s *Service) ListDistinctPortalCountriesForOrganizationID(
 		func(ctx context.Context, conn pg.Querier) error {
 			thirdParties := &coredata.ThirdParties{}
 
-			result, err := thirdParties.LoadDistinctCompliancePortalCountriesByOrganizationID(ctx, conn, scope, organizationID)
+			result, err := thirdParties.LoadDistinctCompliancePortalCountriesByCompliancePortalID(ctx, conn, scope, compliancePortalID)
 			if err != nil {
 				return fmt.Errorf("cannot load thirdParty countries: %w", err)
 			}
@@ -190,6 +190,8 @@ func (s *Service) CountThirdPartiesForPortalID(
 		showOnCompliancePortal := true
 		filter = coredata.NewThirdPartyFilter(&showOnCompliancePortal, nil, nil, nil, nil)
 	}
+
+	filter = filter.WithCompliancePortalID(compliancePageID)
 
 	var count int
 

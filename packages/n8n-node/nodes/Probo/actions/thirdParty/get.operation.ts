@@ -130,7 +130,6 @@ export async function execute(
 					trustPageUrl
 					certifications
 					countries
-					showOnCompliancePortal
 					${organizationFragment}
 					${businessOwnerFragment}
 					${securityOwnerFragment}

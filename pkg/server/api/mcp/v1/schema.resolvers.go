@@ -4912,19 +4912,19 @@ func (r *Resolver) DeleteRightsRequestTool(ctx context.Context, req *mcp.CallToo
 }
 
 // GetCompliancePortalTool handles the getCompliancePortal tool
-// Get the compliance portal for an organization
+// Get a compliance portal by ID
 func (r *Resolver) GetCompliancePortalTool(ctx context.Context, req *mcp.CallToolRequest, input *types.GetCompliancePortalInput) (*mcp.CallToolResult, types.GetCompliancePortalOutput, error) {
-	scope, err := r.Authorize(ctx, input.OrganizationID, management.ActionCompliancePortalGet)
+	scope, err := r.Authorize(ctx, input.CompliancePortalID, management.ActionCompliancePortalGet)
 	if err != nil {
 		return nil, types.GetCompliancePortalOutput{}, err
 	}
 
 	prb := r.management
 
-	compliancePortal, err := prb.GetByOrganizationID(ctx, scope, input.OrganizationID)
+	compliancePortal, err := prb.Get(ctx, scope, input.CompliancePortalID)
 	if err != nil {
 		if errors.Is(err, coredata.ErrResourceNotFound) {
-			return nil, types.GetCompliancePortalOutput{}, fmt.Errorf("compliance portal not found for organization")
+			return nil, types.GetCompliancePortalOutput{}, fmt.Errorf("compliance portal not found")
 		}
 
 		return nil, types.GetCompliancePortalOutput{}, fmt.Errorf("cannot get compliance portal: %w", err)
@@ -7354,4 +7354,37 @@ func (r *Resolver) DeleteCommitmentTool(ctx context.Context, req *mcp.CallToolRe
 	}
 
 	return nil, types.DeleteCommitmentOutput{DeletedCommitmentID: input.ID}, nil
+}
+
+func (r *Resolver) ListCompliancePortalsTool(ctx context.Context, req *mcp.CallToolRequest, input *types.ListCompliancePortalsInput) (*mcp.CallToolResult, types.ListCompliancePortalsOutput, error) {
+	scope, err := r.Authorize(ctx, input.OrganizationID, management.ActionCompliancePortalList)
+	if err != nil {
+		return nil, types.ListCompliancePortalsOutput{}, err
+	}
+
+	pageOrderBy := page.OrderBy[coredata.CompliancePortalOrderField]{
+		Field:     coredata.CompliancePortalOrderFieldCreatedAt,
+		Direction: page.OrderDirectionAsc,
+	}
+
+	if input.OrderBy != nil {
+		pageOrderBy = page.OrderBy[coredata.CompliancePortalOrderField]{
+			Field:     input.OrderBy.Field,
+			Direction: input.OrderBy.Direction,
+		}
+	}
+
+	cursor := types.NewCursor(input.Size, input.Cursor, pageOrderBy)
+
+	p, err := r.management.ListForOrganizationID(ctx, scope, input.OrganizationID, cursor)
+	if err != nil {
+		return nil, types.ListCompliancePortalsOutput{}, fmt.Errorf("cannot list compliance portals: %w", err)
+	}
+
+	portals := make([]*types.CompliancePortal, 0, len(p.Data))
+	for _, portal := range p.Data {
+		portals = append(portals, types.NewCompliancePortal(portal))
+	}
+
+	return nil, types.NewListCompliancePortalsOutput(portals, p), nil
 }

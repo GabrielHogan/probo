@@ -55,12 +55,19 @@ func (s *Service) GetAudit(
 	return audit, nil
 }
 
+// GetAuditByReportFileID loads the audit owning the given report file as
+// published on the given compliance portal. The returned audit carries the
+// portal-scoped visibility read from the portal/audit association: audits not
+// attached to the portal are reported as not found, and audits attached with a
+// NONE visibility are reported as a missing report.
 func (s *Service) GetAuditByReportFileID(
 	ctx context.Context,
 	scope coredata.Scoper,
+	compliancePortalID gid.GID,
 	fileID gid.GID,
 ) (*coredata.Audit, error) {
 	audit := &coredata.Audit{}
+	portalAudit := &coredata.CompliancePortalAudit{}
 
 	err := s.pg.WithConn(
 		ctx,
@@ -69,12 +76,22 @@ func (s *Service) GetAuditByReportFileID(
 				return fmt.Errorf("cannot load audit: %w", err)
 			}
 
+			if err := portalAudit.LoadByCompliancePortalIDAndAuditID(ctx, conn, scope, compliancePortalID, audit.ID); err != nil {
+				return fmt.Errorf("cannot load compliance page audit: %w", err)
+			}
+
 			return nil
 		},
 	)
 	if err != nil {
 		return nil, err
 	}
+
+	if portalAudit.Visibility == coredata.CompliancePortalVisibilityNone {
+		return nil, ErrReportNotFound
+	}
+
+	audit.CompliancePortalVisibility = portalAudit.Visibility
 
 	return audit, nil
 }

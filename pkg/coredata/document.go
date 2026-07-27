@@ -25,6 +25,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -37,11 +38,13 @@ import (
 
 type (
 	Document struct {
-		ID                         gid.GID                    `db:"id"`
-		OrganizationID             gid.GID                    `db:"organization_id"`
-		CurrentPublishedMajor      *int                       `db:"current_published_major"`
-		CurrentPublishedMinor      *int                       `db:"current_published_minor"`
-		CompliancePortalVisibility CompliancePortalVisibility `db:"trust_center_visibility"`
+		ID                    gid.GID `db:"id"`
+		OrganizationID        gid.GID `db:"organization_id"`
+		CurrentPublishedMajor *int    `db:"current_published_major"`
+		CurrentPublishedMinor *int    `db:"current_published_minor"`
+		// Portal-scoped, so it lives in trust_center_documents rather than on
+		// the document row. Loaders that resolve a portal populate it.
+		CompliancePortalVisibility CompliancePortalVisibility `db:"-"`
 		WriteMode                  DocumentWriteMode          `db:"write_mode"`
 		Status                     DocumentStatus             `db:"status"`
 		ArchivedAt                 *time.Time                 `db:"archived_at"`
@@ -398,17 +401,31 @@ func (p *Documents) LoadPublishedByCompliancePortalID(
 
 	filter = filter.WithCompliancePortalID(compliancePortalID)
 
-	return p.loadPublished(ctx, conn, scope, organizationID, cursor, filter)
+	return p.loadPublished(ctx, conn, scope, compliancePortalID, organizationID, cursor, filter)
 }
 
 func (p *Documents) loadPublished(
 	ctx context.Context,
 	conn pg.Querier,
 	scope Scoper,
+	compliancePortalID gid.GID,
 	organizationID gid.GID,
 	cursor *page.Cursor[DocumentOrderField],
 	filter *DocumentFilter,
 ) error {
+	visibilityByDocumentID, err := LoadDocumentVisibilitiesByCompliancePortalID(
+		ctx,
+		conn,
+		scope,
+		compliancePortalID,
+		filter.compliancePortalVisibilities,
+	)
+	if err != nil {
+		return fmt.Errorf("cannot load compliance portal document visibilities: %w", err)
+	}
+
+	filter = filter.withCompliancePortalDocumentIDs(slices.Collect(maps.Keys(visibilityByDocumentID)))
+
 	q := `
 WITH latest_versions AS (
 	SELECT DISTINCT ON (document_id) document_id, title, document_type
@@ -436,7 +453,6 @@ base AS (
 		documents.current_published_major,
 		documents.current_published_minor,
 		documents.write_mode,
-		tcd.visibility AS trust_center_visibility,
 		documents.status,
 		documents.archived_at,
 		documents.created_at,
@@ -445,9 +461,6 @@ base AS (
 		COALESCE(lv.document_type, 'OTHER') AS document_type
 	FROM
 		documents
-	INNER JOIN trust_center_documents tcd
-		ON tcd.document_id = documents.id
-		AND tcd.trust_center_id = @compliance_portal_id
 	LEFT JOIN latest_versions lv ON lv.document_id = documents.id
 	LEFT JOIN published_versions pv ON pv.document_id = documents.id
 	WHERE
@@ -461,8 +474,7 @@ SELECT * FROM base WHERE %s
 	q = fmt.Sprintf(q, scope.SQLFragment(), filter.SQLFragment(), cursor.SQLFragment())
 
 	args := pgx.NamedArgs{
-		"organization_id":      organizationID,
-		"compliance_portal_id": filter.compliancePortalID,
+		"organization_id": organizationID,
 	}
 	maps.Copy(args, scope.SQLArguments())
 	maps.Copy(args, filter.SQLArguments())
@@ -476,6 +488,10 @@ SELECT * FROM base WHERE %s
 	documents, err := pgx.CollectRows(rows, pgx.RowToAddrOfStructByName[Document])
 	if err != nil {
 		return fmt.Errorf("cannot collect published documents: %w", err)
+	}
+
+	for _, document := range documents {
+		document.CompliancePortalVisibility = visibilityByDocumentID[document.ID]
 	}
 
 	*p = documents
@@ -675,7 +691,6 @@ base AS (
 		sd.organization_id,
 		sd.current_published_major,
 		sd.current_published_minor,
-		sd.trust_center_visibility,
 		sd.write_mode,
 		sd.status,
 		sd.archived_at,
@@ -776,7 +791,6 @@ base AS (
 		sd.organization_id,
 		sd.current_published_major,
 		sd.current_published_minor,
-		sd.trust_center_visibility,
 		sd.write_mode,
 		sd.status,
 		sd.archived_at,
@@ -877,7 +891,6 @@ base AS (
 		sd.organization_id,
 		sd.current_published_major,
 		sd.current_published_minor,
-		sd.trust_center_visibility,
 		sd.write_mode,
 		sd.status,
 		sd.archived_at,

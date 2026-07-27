@@ -46,12 +46,13 @@ const compliancePageFragment = graphql`
 `;
 
 const documentFragment = graphql`
-  fragment CompliancePageDocumentListItem_documentFragment on Document {
+  fragment CompliancePageDocumentListItem_documentFragment on Document
+  @argumentDefinitions(compliancePortalId: { type: "ID!" }) {
     id
     alias
     canSetAlias: permission(action: "resourcealias:alias:set")
     canRemoveAlias: permission(action: "resourcealias:alias:remove")
-    compliancePortalVisibility
+    compliancePortalVisibility(compliancePortalId: $compliancePortalId)
     latestPublishedVersion: versions(
       first: 1
       orderBy: { field: CREATED_AT, direction: DESC }
@@ -69,21 +70,24 @@ const documentFragment = graphql`
 
 const updateDocumentVisibilityMutation = graphql`
   mutation CompliancePageDocumentListItem_updateVisibilityMutation(
-    $input: UpdateDocumentInput!
+    $input: UpdateCompliancePortalDocumentVisibilityInput!
+    $compliancePortalId: ID!
   ) {
-    updateDocument(input: $input) {
+    updateCompliancePortalDocumentVisibility(input: $input) {
       document {
         ...CompliancePageDocumentListItem_documentFragment
+          @arguments(compliancePortalId: $compliancePortalId)
       }
     }
   }
 `;
 
 export function CompliancePageDocumentListItem(props: {
+  compliancePortalId: string;
   compliancePageFragmentRef: CompliancePageDocumentListItem_compliancePageFragment$key;
   documentFragmentRef: CompliancePageDocumentListItem_documentFragment$key;
 }) {
-  const { compliancePageFragmentRef, documentFragmentRef } = props;
+  const { compliancePortalId, compliancePageFragmentRef, documentFragmentRef } = props;
 
   const organizationId = useOrganizationId();
   const { t } = useTranslation("organizations/compliance-pages");
@@ -112,13 +116,15 @@ export function CompliancePageDocumentListItem(props: {
       await updateDocumentVisibility({
         variables: {
           input: {
-            id: document.id,
+            compliancePortalId,
+            documentId: document.id,
             compliancePortalVisibility: typedValue,
           },
+          compliancePortalId,
         },
       });
     },
-    [document.id, updateDocumentVisibility],
+    [compliancePortalId, document.id, updateDocumentVisibility],
   );
 
   const latestVersion = document.latestPublishedVersion.edges[0]?.node;

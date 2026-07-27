@@ -268,7 +268,9 @@ type Document implements Node {
     id: ID!
     currentPublishedMajor: Int
     currentPublishedMinor: Int
-    compliancePortalVisibility: CompliancePortalVisibility!
+    compliancePortalVisibility(
+        compliancePortalId: ID!
+    ): CompliancePortalVisibility! @goField(forceResolver: true)
     alias: String @goField(forceResolver: true)
     organization: Organization! @goField(forceResolver: true)
 
@@ -592,7 +594,6 @@ input CreateDocumentInput {
     content: String
     documentType: DocumentType!
     classification: DocumentClassification!
-    compliancePortalVisibility: CompliancePortalVisibility
     defaultApproverIds: [ID!]
 }
 
@@ -602,7 +603,6 @@ input UpdateDocumentInput {
     content: String
     classification: DocumentClassification
     documentType: DocumentType
-    compliancePortalVisibility: CompliancePortalVisibility
     defaultApproverIds: [ID!]
 }
 

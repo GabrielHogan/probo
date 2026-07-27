@@ -40,7 +40,9 @@ export default function CompliancePageMailingListPageLoader() {
     loadQuery({ compliancePortalId });
   }, [loadQuery, compliancePortalId]);
 
-  if (!queryRef) {
+  // loadQuery runs in a passive effect, so the render right after a portal
+  // switch still holds the previous portal's ref.
+  if (!queryRef || queryRef.variables.compliancePortalId !== compliancePortalId) {
     return <LinkCardSkeleton />;
   }
 

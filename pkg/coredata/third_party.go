@@ -269,7 +269,6 @@ SELECT
     terms_of_service_url,
     security_page_url,
     trust_page_url,
-    show_on_trust_center,
     level,
     vetting_status,
     vetting_website_url,
@@ -342,7 +341,6 @@ SELECT
     terms_of_service_url,
     security_page_url,
     trust_page_url,
-    show_on_trust_center,
     level,
     vetting_status,
     vetting_website_url,
@@ -417,7 +415,6 @@ SELECT
     terms_of_service_url,
     security_page_url,
     trust_page_url,
-    show_on_trust_center,
     level,
     vetting_status,
     vetting_website_url,
@@ -495,7 +492,6 @@ SELECT
     terms_of_service_url,
     security_page_url,
     trust_page_url,
-    show_on_trust_center,
     level,
     vetting_status,
     vetting_website_url,
@@ -572,7 +568,6 @@ SELECT
     terms_of_service_url,
     security_page_url,
     trust_page_url,
-    show_on_trust_center,
     level,
     vetting_status,
     vetting_website_url,
@@ -644,7 +639,6 @@ INSERT INTO
         terms_of_service_url,
         security_page_url,
         trust_page_url,
-        show_on_trust_center,
         level,
         vetting_status,
         vetting_website_url,
@@ -679,7 +673,6 @@ VALUES (
     @terms_of_service_url,
     @security_page_url,
     @trust_page_url,
-    @show_on_trust_center,
     @level,
     @vetting_status,
     @vetting_website_url,
@@ -715,14 +708,15 @@ VALUES (
 		"status_page_url":                  v.StatusPageURL,
 		"terms_of_service_url":             v.TermsOfServiceURL,
 		"security_page_url":                v.SecurityPageURL,
-		"trust_page_url":                   v.TrustPageURL, "level": v.Level,
-		"vetting_status":                v.VettingStatus,
-		"vetting_website_url":           v.VettingWebsiteURL,
-		"vetting_procedure":             v.VettingProcedure,
-		"vetting_processing_started_at": v.VettingProcessingStartedAt,
-		"vetting_error_message":         v.VettingErrorMessage,
-		"created_at":                    v.CreatedAt,
-		"updated_at":                    v.UpdatedAt,
+		"trust_page_url":                   v.TrustPageURL,
+		"level":                            v.Level,
+		"vetting_status":                   v.VettingStatus,
+		"vetting_website_url":              v.VettingWebsiteURL,
+		"vetting_procedure":                v.VettingProcedure,
+		"vetting_processing_started_at":    v.VettingProcessingStartedAt,
+		"vetting_error_message":            v.VettingErrorMessage,
+		"created_at":                       v.CreatedAt,
+		"updated_at":                       v.UpdatedAt,
 	}
 	_, err := conn.Exec(ctx, q, args)
 
@@ -755,6 +749,11 @@ func (v *ThirdParties) CountByOrganizationID(
 	organizationID gid.GID,
 	filter *ThirdPartyFilter,
 ) (int, error) {
+	filter, resolveErr := filter.resolveCompliancePortal(ctx, conn, scope)
+	if resolveErr != nil {
+		return 0, resolveErr
+	}
+
 	q := `
 SELECT
     COUNT(id)
@@ -784,11 +783,11 @@ WHERE
 	return count, nil
 }
 
-func (v *ThirdParties) LoadDistinctCompliancePortalCategoriesByOrganizationID(
+func (v *ThirdParties) LoadDistinctCompliancePortalCategoriesByCompliancePortalID(
 	ctx context.Context,
 	conn pg.Querier,
 	scope Scoper,
-	organizationID gid.GID,
+	compliancePortalID gid.GID,
 ) ([]ThirdPartyCategory, error) {
 	q := `
 SELECT DISTINCT
@@ -797,14 +796,17 @@ FROM
     third_parties
 WHERE
     %s
-    AND organization_id = @organization_id
-    AND show_on_trust_center = true
+    AND id IN (
+        SELECT third_party_id
+        FROM trust_center_third_parties
+        WHERE trust_center_id = @compliance_portal_id
+    )
 ORDER BY
     category ASC
 `
 	q = fmt.Sprintf(q, scope.SQLFragment())
 
-	args := pgx.StrictNamedArgs{"organization_id": organizationID}
+	args := pgx.StrictNamedArgs{"compliance_portal_id": compliancePortalID}
 	maps.Copy(args, scope.SQLArguments())
 
 	rows, err := conn.Query(ctx, q, args)
@@ -820,11 +822,11 @@ ORDER BY
 	return categories, nil
 }
 
-func (v *ThirdParties) LoadDistinctCompliancePortalCountriesByOrganizationID(
+func (v *ThirdParties) LoadDistinctCompliancePortalCountriesByCompliancePortalID(
 	ctx context.Context,
 	conn pg.Querier,
 	scope Scoper,
-	organizationID gid.GID,
+	compliancePortalID gid.GID,
 ) ([]CountryCode, error) {
 	q := `
 SELECT DISTINCT
@@ -833,14 +835,17 @@ FROM
     third_parties
 WHERE
     %s
-    AND organization_id = @organization_id
-    AND show_on_trust_center = true
+    AND id IN (
+        SELECT third_party_id
+        FROM trust_center_third_parties
+        WHERE trust_center_id = @compliance_portal_id
+    )
 ORDER BY
     country ASC
 `
 	q = fmt.Sprintf(q, scope.SQLFragment())
 
-	args := pgx.StrictNamedArgs{"organization_id": organizationID}
+	args := pgx.StrictNamedArgs{"compliance_portal_id": compliancePortalID}
 	maps.Copy(args, scope.SQLArguments())
 
 	rows, err := conn.Query(ctx, q, args)
@@ -864,6 +869,11 @@ func (v *ThirdParties) LoadByOrganizationID(
 	cursor *page.Cursor[ThirdPartyOrderField],
 	filter *ThirdPartyFilter,
 ) error {
+	filter, err := filter.resolveCompliancePortal(ctx, conn, scope)
+	if err != nil {
+		return err
+	}
+
 	q := `
 SELECT
 	id,

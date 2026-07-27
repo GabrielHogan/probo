@@ -50,7 +50,7 @@ func (r *queryResolver) Node(ctx context.Context, id gid.GID) (types.Node, error
 	case coredata.DocumentEntityType:
 		compliancePortal := complianceportal.CompliancePortalFromContext(ctx)
 
-		document, err := visitorService.GetDocument(ctx, scope, compliancePortal.OrganizationID, id)
+		document, err := visitorService.GetDocument(ctx, scope, compliancePortal.ID, compliancePortal.OrganizationID, id)
 		if err != nil {
 			if errors.Is(err, visitor.ErrDocumentNotFound) || errors.Is(err, visitor.ErrDocumentNotVisible) || errors.Is(err, coredata.ErrResourceNotFound) {
 				return nil, gqlutils.NotFoundf(ctx, "node %q not found", id)
@@ -79,7 +79,7 @@ func (r *queryResolver) Node(ctx context.Context, id gid.GID) (types.Node, error
 	case coredata.FileEntityType:
 		compliancePortal := complianceportal.CompliancePortalFromContext(ctx)
 
-		file, err := visitorService.GetReport(ctx, scope, compliancePortal.OrganizationID, id)
+		file, err := visitorService.GetReport(ctx, scope, compliancePortal.ID, compliancePortal.OrganizationID, id)
 		if err != nil {
 			if errors.Is(err, visitor.ErrReportNotFound) || errors.Is(err, coredata.ErrResourceNotFound) {
 				return nil, gqlutils.NotFoundf(ctx, "node %q not found", id)
@@ -131,7 +131,7 @@ func (r *queryResolver) Node(ctx context.Context, id gid.GID) (types.Node, error
 	case coredata.CompliancePortalFileEntityType:
 		compliancePortal := complianceportal.CompliancePortalFromContext(ctx)
 
-		portalFile, err := visitorService.GetPortalFile(ctx, scope, compliancePortal.OrganizationID, id)
+		portalFile, err := visitorService.GetPortalFile(ctx, scope, compliancePortal.ID, compliancePortal.OrganizationID, id)
 		if err != nil {
 			if errors.Is(err, visitor.ErrPortalFileNotFound) || errors.Is(err, visitor.ErrPortalFileNotVisible) {
 				return nil, gqlutils.NotFoundf(ctx, "node %q not found", id)

@@ -39,7 +39,9 @@ export default function CompliancePageDocumentsPageLoader() {
     loadQuery({ compliancePortalId, organizationId });
   }, [loadQuery, compliancePortalId, organizationId]);
 
-  if (!queryRef) {
+  // loadQuery runs in a passive effect, so the render right after a portal
+  // switch still holds the previous portal's ref.
+  if (!queryRef || queryRef.variables.compliancePortalId !== compliancePortalId) {
     return <LinkCardSkeleton />;
   }
 

@@ -37,6 +37,7 @@ export const compliancePageDocumentsPageQuery = graphql`
       __typename
       ... on Organization {
         ...CompliancePageDocumentList_organizationFragment
+          @arguments(compliancePortalId: $compliancePortalId)
       }
     }
   }
@@ -72,6 +73,7 @@ export function CompliancePageDocumentsPage(props: { queryRef: PreloadedQuery<Co
       </div>
 
       <CompliancePageDocumentList
+        compliancePortalId={queryRef.variables.compliancePortalId}
         organizationRef={data.organization}
         compliancePortalRef={data.compliancePortal}
       />

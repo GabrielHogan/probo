@@ -45,7 +45,8 @@ const compliancePageFragment = graphql`
 `;
 
 const auditFragment = graphql`
-  fragment CompliancePageAuditListItem_auditFragment on Audit {
+  fragment CompliancePageAuditListItem_auditFragment on Audit
+  @argumentDefinitions(compliancePortalId: { type: "ID!" }) {
     id
     name
     framework {
@@ -53,25 +54,30 @@ const auditFragment = graphql`
     }
     validUntil
     state
-    compliancePortalVisibility
+    compliancePortalVisibility(compliancePortalId: $compliancePortalId)
   }
 `;
 
 const updateAuditVisibilityMutation = graphql`
-  mutation CompliancePageAuditListItem_updateAuditVisibilityMutation($input: UpdateAuditInput!) {
-    updateAudit(input: $input) {
+  mutation CompliancePageAuditListItem_updateAuditVisibilityMutation(
+    $input: UpdateCompliancePortalAuditVisibilityInput!
+    $compliancePortalId: ID!
+  ) {
+    updateCompliancePortalAuditVisibility(input: $input) {
       audit {
         ...CompliancePageAuditListItem_auditFragment
+          @arguments(compliancePortalId: $compliancePortalId)
       }
     }
   }
 `;
 
 export function CompliancePageAuditListItem(props: {
+  compliancePortalId: string;
   auditFragmentRef: CompliancePageAuditListItem_auditFragment$key;
   compliancePageFragmentRef: CompliancePageAuditListItem_compliancePageFragment$key;
 }) {
-  const { auditFragmentRef, compliancePageFragmentRef } = props;
+  const { compliancePortalId, auditFragmentRef, compliancePageFragmentRef } = props;
 
   const organizationId = useOrganizationId();
   const { i18n, t } = useTranslation("organizations/compliance-pages");
@@ -98,13 +104,15 @@ export function CompliancePageAuditListItem(props: {
       await updateAuditVisibility({
         variables: {
           input: {
-            id: audit.id,
+            compliancePortalId,
+            auditId: audit.id,
             compliancePortalVisibility: typedValue,
           },
+          compliancePortalId,
         },
       });
     },
-    [audit.id, updateAuditVisibility],
+    [compliancePortalId, audit.id, updateAuditVisibility],
   );
 
   const visibilityOptions = getCompliancePageVisibilityOptions(t);

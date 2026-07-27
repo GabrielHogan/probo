@@ -29,31 +29,36 @@ import { useOrganizationId } from "#/hooks/useOrganizationId";
 import { useMutation } from "#/lib/relay/useMutation";
 
 const thirdPartyFragment = graphql`
-  fragment CompliancePageThirdPartyListItem_thirdPartyFragment on ThirdParty {
+  fragment CompliancePageThirdPartyListItem_thirdPartyFragment on ThirdParty
+  @argumentDefinitions(compliancePortalId: { type: "ID!" }) {
     id
     category
     name
-    showOnCompliancePage: showOnCompliancePortal
+    showOnCompliancePage: compliancePortalPublished(compliancePortalId: $compliancePortalId)
     canUpdate: permission(action: "core:thirdParty:update")
   }
 `;
 
 const updateThirdPartyVisibilityMutation = graphql`
-  mutation CompliancePageThirdPartyListItemMutation($input: UpdateThirdPartyInput!) {
-    updateThirdParty(input: $input) {
+  mutation CompliancePageThirdPartyListItemMutation(
+    $input: UpdateCompliancePortalThirdPartyPublishedInput!
+    $compliancePortalId: ID!
+  ) {
+    updateCompliancePortalThirdPartyPublished(input: $input) {
       thirdParty {
         id
-        showOnCompliancePortal
         ...CompliancePageThirdPartyListItem_thirdPartyFragment
+          @arguments(compliancePortalId: $compliancePortalId)
       }
     }
   }
 `;
 
 export function CompliancePageThirdPartyListItem(props: {
+  compliancePortalId: string;
   thirdPartyFragmentRef: CompliancePageThirdPartyListItem_thirdPartyFragment$key;
 }) {
-  const { thirdPartyFragmentRef } = props;
+  const { compliancePortalId, thirdPartyFragmentRef } = props;
 
   const organizationId = useOrganizationId();
   const { t } = useTranslation("organizations/compliance-pages");
@@ -93,9 +98,11 @@ export function CompliancePageThirdPartyListItem(props: {
               void updateThirdPartyVisibility({
                 variables: {
                   input: {
-                    id: thirdParty.id,
-                    showOnCompliancePortal: !thirdParty.showOnCompliancePage,
+                    compliancePortalId,
+                    thirdPartyId: thirdParty.id,
+                    published: !thirdParty.showOnCompliancePage,
                   },
+                  compliancePortalId,
                 },
               })}
             icon={thirdParty.showOnCompliancePage ? IconCrossLargeX : IconCheckmark1}

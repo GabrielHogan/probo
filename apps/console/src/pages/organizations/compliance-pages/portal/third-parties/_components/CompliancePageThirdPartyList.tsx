@@ -28,19 +28,24 @@ import type { CompliancePageThirdPartyListFragment$key } from "#/__generated__/c
 import { CompliancePageThirdPartyListItem } from "./CompliancePageThirdPartyListItem";
 
 const fragment = graphql`
-  fragment CompliancePageThirdPartyListFragment on Organization {
+  fragment CompliancePageThirdPartyListFragment on Organization
+  @argumentDefinitions(compliancePortalId: { type: "ID!" }) {
     thirdParties(first: 100) {
       edges {
         node {
           id
           ...CompliancePageThirdPartyListItem_thirdPartyFragment
+            @arguments(compliancePortalId: $compliancePortalId)
         }
       }
     }
   }
 `;
 
-export function CompliancePageThirdPartyList(props: { fragmentRef: CompliancePageThirdPartyListFragment$key }) {
+export function CompliancePageThirdPartyList(props: {
+  compliancePortalId: string;
+  fragmentRef: CompliancePageThirdPartyListFragment$key;
+}) {
   const { fragmentRef } = props;
 
   const { t } = useTranslation("organizations/compliance-pages");
@@ -69,6 +74,7 @@ export function CompliancePageThirdPartyList(props: { fragmentRef: CompliancePag
           {thirdParties.edges.map(({ node: thirdParty }) => (
             <CompliancePageThirdPartyListItem
               key={thirdParty.id}
+              compliancePortalId={props.compliancePortalId}
               thirdPartyFragmentRef={thirdParty}
             />
           ))}

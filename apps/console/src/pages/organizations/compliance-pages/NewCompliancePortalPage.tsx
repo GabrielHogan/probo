@@ -18,7 +18,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import { formatError } from "@probo/helpers";
 import { usePageTitle } from "@probo/hooks";
 import {
   Breadcrumb,
@@ -27,23 +26,26 @@ import {
   Field,
   Input,
   PageHeader,
-  useToast,
 } from "@probo/ui";
 import { type FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useMutation } from "react-relay";
 import { useNavigate } from "react-router";
-import { graphql } from "relay-runtime";
+import { ConnectionHandler, graphql } from "relay-runtime";
 
 import type { NewCompliancePortalPageMutation } from "#/__generated__/core/NewCompliancePortalPageMutation.graphql";
 import { useOrganizationId } from "#/hooks/useOrganizationId";
+import { useMutation } from "#/lib/relay/useMutation";
 
 const createCompliancePortalMutation = graphql`
-  mutation NewCompliancePortalPageMutation($input: CreateCompliancePortalInput!) {
+  mutation NewCompliancePortalPageMutation(
+    $input: CreateCompliancePortalInput!
+    $connections: [ID!]!
+  ) {
     createCompliancePortal(input: $input) {
-      compliancePortalEdge {
+      compliancePortalEdge @prependEdge(connections: $connections) {
         node {
           id
+          ...CompliancePortalListItem_compliancePortal
         }
       }
     }
@@ -52,42 +54,48 @@ const createCompliancePortalMutation = graphql`
 
 export default function NewCompliancePortalPage() {
   const { t } = useTranslation("organizations/compliance-pages");
-  const { toast } = useToast();
   const navigate = useNavigate();
   const organizationId = useOrganizationId();
 
   usePageTitle(t("newPortalPage.pageTitle"));
 
   const [createCompliancePortal, isCreating]
-    = useMutation<NewCompliancePortalPageMutation>(createCompliancePortalMutation);
+    = useMutation<NewCompliancePortalPageMutation>(
+      createCompliancePortalMutation,
+      {
+        successMessage: t("newPortalPage.messages.created"),
+        errorToast: t("newPortalPage.errors.create"),
+      },
+    );
 
   const [entityName, setEntityName] = useState("");
+
+  // The overview list is rendered by another route, so derive its connection ID
+  // rather than threading `__id` through.
+  const connectionId = ConnectionHandler.getConnectionID(
+    organizationId,
+    "CompliancePagesOverviewPage_compliancePortals",
+  );
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    createCompliancePortal({
+    void createCompliancePortal({
       variables: {
         input: {
           organizationId,
           entityName,
         },
+        connections: [connectionId],
       },
-      onCompleted(data) {
-        toast({
-          title: t("newPortalPage.messages.created.title"),
-          description: t("newPortalPage.messages.created.description"),
-          variant: "success",
-        });
+      onCompleted(data, errors) {
+        // Validation and slug-conflict failures arrive here with a null payload;
+        // the hook raises the error toast, so only navigate on a real success.
+        if (errors?.length) {
+          return;
+        }
         const portalId = data.createCompliancePortal.compliancePortalEdge.node.id;
         void navigate(`/organizations/${organizationId}/compliance-pages/${portalId}`);
-      },
-      onError(error) {
-        toast({
-          title: t("newPortalPage.errors.create.title"),
-          description: formatError(t("newPortalPage.errors.create.description"), error),
-          variant: "error",
-        });
       },
     });
   };

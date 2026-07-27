@@ -302,7 +302,9 @@ type ThirdParty implements Node {
     headquarterAddress: String
     legalName: String
     websiteUrl: String
-    showOnCompliancePortal: Boolean!
+    compliancePortalPublished(
+        compliancePortalId: ID!
+    ): Boolean! @goField(forceResolver: true)
     level: Int!
 
     parentThirdParty: ThirdParty @goField(forceResolver: true)
@@ -566,7 +568,6 @@ input UpdateThirdPartyInput {
     trustPageUrl: String @goField(omittable: true)
     businessOwnerId: ID @goField(omittable: true)
     securityOwnerId: ID @goField(omittable: true)
-    showOnCompliancePortal: Boolean
 }
 
 input DeleteThirdPartyInput {

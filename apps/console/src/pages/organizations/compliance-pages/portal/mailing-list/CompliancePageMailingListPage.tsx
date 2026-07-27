@@ -96,6 +96,14 @@ export function CompliancePageMailingListPage(props: {
     : null;
 
   const [replyTo, setReplyTo] = useState(mailingList?.replyTo ?? "");
+  // This page stays mounted across portal switches, so re-seed the field when it
+  // starts editing a different mailing list — otherwise saving without touching
+  // the input overwrites the newly selected portal's reply-to.
+  const [editedMailingListId, setEditedMailingListId] = useState(mailingListId);
+  if (editedMailingListId !== mailingListId) {
+    setEditedMailingListId(mailingListId);
+    setReplyTo(mailingList?.replyTo ?? "");
+  }
 
   const [updateMailingList, isUpdating]
     = useMutation<CompliancePageMailingListPage_updateMailingListMutation>(

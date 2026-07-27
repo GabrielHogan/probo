@@ -25,6 +25,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -36,17 +37,19 @@ import (
 
 type (
 	Audit struct {
-		ID                         gid.GID                    `db:"id"`
-		Name                       *string                    `db:"name"`
-		OrganizationID             gid.GID                    `db:"organization_id"`
-		FrameworkID                gid.GID                    `db:"framework_id"`
-		ReportFileID               *gid.GID                   `db:"report_file_id"`
-		ValidFrom                  *time.Time                 `db:"valid_from"`
-		ValidUntil                 *time.Time                 `db:"valid_until"`
-		AuditStartDate             *time.Time                 `db:"audit_start_date"`
-		AuditEndDate               *time.Time                 `db:"audit_end_date"`
-		State                      AuditState                 `db:"state"`
-		CompliancePortalVisibility CompliancePortalVisibility `db:"trust_center_visibility"`
+		ID             gid.GID    `db:"id"`
+		Name           *string    `db:"name"`
+		OrganizationID gid.GID    `db:"organization_id"`
+		FrameworkID    gid.GID    `db:"framework_id"`
+		ReportFileID   *gid.GID   `db:"report_file_id"`
+		ValidFrom      *time.Time `db:"valid_from"`
+		ValidUntil     *time.Time `db:"valid_until"`
+		AuditStartDate *time.Time `db:"audit_start_date"`
+		AuditEndDate   *time.Time `db:"audit_end_date"`
+		State          AuditState `db:"state"`
+		// Portal-scoped, so it lives in trust_center_audits rather than on
+		// the audit row. Loaders that resolve a portal populate it.
+		CompliancePortalVisibility CompliancePortalVisibility `db:"-"`
 		CreatedAt                  time.Time                  `db:"created_at"`
 		UpdatedAt                  time.Time                  `db:"updated_at"`
 	}
@@ -213,6 +216,19 @@ func (a *Audits) LoadByCompliancePortalID(
 
 	filter = filter.WithCompliancePortalID(compliancePortalID)
 
+	visibilityByAuditID, err := LoadAuditVisibilitiesByCompliancePortalID(
+		ctx,
+		conn,
+		scope,
+		compliancePortalID,
+		filter.compliancePortalVisibilities,
+	)
+	if err != nil {
+		return fmt.Errorf("cannot load compliance portal audit visibilities: %w", err)
+	}
+
+	filter = filter.withCompliancePortalAuditIDs(slices.Collect(maps.Keys(visibilityByAuditID)))
+
 	q := `
 SELECT
 	audits.id,
@@ -225,14 +241,10 @@ SELECT
 	audits.audit_start_date,
 	audits.audit_end_date,
 	audits.state,
-	tca.visibility AS trust_center_visibility,
 	audits.created_at,
 	audits.updated_at
 FROM
 	audits
-INNER JOIN trust_center_audits tca
-	ON tca.audit_id = audits.id
-	AND tca.trust_center_id = @compliance_portal_id
 WHERE
 	%s
 	AND audits.organization_id = @organization_id
@@ -243,8 +255,7 @@ WHERE
 	q = fmt.Sprintf(q, scope.SQLFragment(), filter.SQLFragment(), cursor.SQLFragment())
 
 	args := pgx.StrictNamedArgs{
-		"organization_id":      organizationID,
-		"compliance_portal_id": compliancePortalID,
+		"organization_id": organizationID,
 	}
 	maps.Copy(args, scope.SQLArguments())
 	maps.Copy(args, filter.SQLArguments())
@@ -258,6 +269,10 @@ WHERE
 	audits, err := pgx.CollectRows(rows, pgx.RowToAddrOfStructByName[Audit])
 	if err != nil {
 		return fmt.Errorf("cannot collect audits: %w", err)
+	}
+
+	for _, audit := range audits {
+		audit.CompliancePortalVisibility = visibilityByAuditID[audit.ID]
 	}
 
 	*a = audits

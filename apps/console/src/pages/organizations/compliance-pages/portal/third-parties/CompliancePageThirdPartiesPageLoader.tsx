@@ -23,21 +23,25 @@ import { useQueryLoader } from "react-relay";
 
 import type { CompliancePageThirdPartiesPageQuery } from "#/__generated__/core/CompliancePageThirdPartiesPageQuery.graphql";
 import { LinkCardSkeleton } from "#/components/skeletons/LinkCardSkeleton";
+import { useCompliancePortalId } from "#/hooks/useCompliancePortalId";
 import { useOrganizationId } from "#/hooks/useOrganizationId";
 
 import { CompliancePageThirdPartiesPage, compliancePageThirdPartiesPageQuery } from "./CompliancePageThirdPartiesPage";
 
 export default function CompliancePageThirdPartiesPageLoader() {
+  const compliancePortalId = useCompliancePortalId();
   const organizationId = useOrganizationId();
   const [queryRef, loadQuery] = useQueryLoader<CompliancePageThirdPartiesPageQuery>(
     compliancePageThirdPartiesPageQuery,
   );
 
   useEffect(() => {
-    loadQuery({ organizationId });
-  }, [loadQuery, organizationId]);
+    loadQuery({ compliancePortalId, organizationId });
+  }, [loadQuery, compliancePortalId, organizationId]);
 
-  if (!queryRef) {
+  // loadQuery runs in a passive effect, so the render right after a portal
+  // switch still holds the previous portal's ref.
+  if (!queryRef || queryRef.variables.compliancePortalId !== compliancePortalId) {
     return <LinkCardSkeleton />;
   }
 

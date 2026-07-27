@@ -47,6 +47,22 @@ func CompliancePortalVisibilities() []CompliancePortalVisibility {
 	}
 }
 
+// compliancePortalVisibilityStrings renders visibilities for a
+// trust_center_visibility[] bind. It returns nil for an empty slice so queries
+// can treat NULL as "no visibility restriction".
+func compliancePortalVisibilityStrings(visibilities []CompliancePortalVisibility) []string {
+	if len(visibilities) == 0 {
+		return nil
+	}
+
+	out := make([]string, len(visibilities))
+	for i, v := range visibilities {
+		out[i] = v.String()
+	}
+
+	return out
+}
+
 func (v CompliancePortalVisibility) IsValid() bool {
 	switch v {
 	case

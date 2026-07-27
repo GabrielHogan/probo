@@ -269,6 +269,11 @@ func (s *Service) fetchDocumentIDs(
 		resourceIDs = append(resourceIDs, id)
 	}
 
+	// The sitemap is served to unauthenticated crawlers: only resources
+	// published publicly on this portal may be enumerated.
+	documentFilter := coredata.NewDocumentCompliancePortalFilter().
+		WithCompliancePortalVisibilities(coredata.CompliancePortalVisibilityPublic)
+
 	var cursorKey *page.CursorKey
 	for {
 		cursor := page.NewCursor(
@@ -281,16 +286,12 @@ func (s *Service) fetchDocumentIDs(
 			},
 		)
 
-		result, err := s.ListDocumentsForCompliancePortalID(ctx, scope, compliancePageID, orgID, cursor, nil)
+		result, err := s.ListDocumentsForCompliancePortalID(ctx, scope, compliancePageID, orgID, cursor, documentFilter)
 		if err != nil {
 			return nil, fmt.Errorf("cannot list documents: %w", err)
 		}
 
 		for _, doc := range result.Data {
-			if doc.CompliancePortalVisibility == coredata.CompliancePortalVisibilityNone {
-				continue
-			}
-
 			appendResourceID(doc.ID)
 		}
 
@@ -302,6 +303,10 @@ func (s *Service) fetchDocumentIDs(
 		ck := last.CursorKey(coredata.DocumentOrderFieldTitle)
 		cursorKey = &ck
 	}
+
+	portalFileFilter := coredata.NewCompliancePortalFileFilter(
+		coredata.WithCompliancePortalFileVisibilities(coredata.CompliancePortalVisibilityPublic),
+	)
 
 	cursorKey = nil
 	for {
@@ -320,17 +325,13 @@ func (s *Service) fetchDocumentIDs(
 			scope,
 			compliancePageID,
 			cursor,
-			coredata.NewCompliancePortalFileFilter(),
+			portalFileFilter,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("cannot list compliance page files: %w", err)
 		}
 
 		for _, file := range result.Data {
-			if file.CompliancePortalVisibility == coredata.CompliancePortalVisibilityNone {
-				continue
-			}
-
 			appendResourceID(file.ID)
 		}
 
@@ -342,6 +343,9 @@ func (s *Service) fetchDocumentIDs(
 		ck := last.CursorKey(coredata.CompliancePortalFileOrderFieldCreatedAt)
 		cursorKey = &ck
 	}
+
+	auditFilter := coredata.NewAuditCompliancePortalFilter().
+		WithCompliancePortalVisibilities(coredata.CompliancePortalVisibilityPublic)
 
 	cursorKey = nil
 	for {
@@ -355,16 +359,12 @@ func (s *Service) fetchDocumentIDs(
 			},
 		)
 
-		result, err := s.ListAuditsForCompliancePortalID(ctx, scope, compliancePageID, orgID, cursor, nil)
+		result, err := s.ListAuditsForCompliancePortalID(ctx, scope, compliancePageID, orgID, cursor, auditFilter)
 		if err != nil {
 			return nil, fmt.Errorf("cannot list audits: %w", err)
 		}
 
 		for _, audit := range result.Data {
-			if audit.CompliancePortalVisibility == coredata.CompliancePortalVisibilityNone {
-				continue
-			}
-
 			if audit.ReportFileID == nil {
 				continue
 			}
@@ -461,6 +461,11 @@ func (s *Service) fetchDocuments(
 ) ([]compliancePageDocument, error) {
 	var docs []compliancePageDocument
 
+	// The markdown rendition is served unauthenticated: only documents
+	// published publicly on this portal may be listed.
+	filter := coredata.NewDocumentCompliancePortalFilter().
+		WithCompliancePortalVisibilities(coredata.CompliancePortalVisibilityPublic)
+
 	var cursorKey *page.CursorKey
 	for {
 		cursor := page.NewCursor(
@@ -473,16 +478,12 @@ func (s *Service) fetchDocuments(
 			},
 		)
 
-		result, err := s.ListDocumentsForCompliancePortalID(ctx, scope, compliancePageID, orgID, cursor, nil)
+		result, err := s.ListDocumentsForCompliancePortalID(ctx, scope, compliancePageID, orgID, cursor, filter)
 		if err != nil {
 			return nil, fmt.Errorf("cannot list documents: %w", err)
 		}
 
 		for _, doc := range result.Data {
-			if doc.CompliancePortalVisibility == coredata.CompliancePortalVisibilityNone {
-				continue
-			}
-
 			docs = append(
 				docs,
 				compliancePageDocument{
@@ -512,6 +513,11 @@ func (s *Service) fetchAudits(
 ) ([]compliancePageAudit, error) {
 	var audits []compliancePageAudit
 
+	// The markdown rendition is served unauthenticated: only audits published
+	// publicly on this portal may be listed.
+	filter := coredata.NewAuditCompliancePortalFilter().
+		WithCompliancePortalVisibilities(coredata.CompliancePortalVisibilityPublic)
+
 	var cursorKey *page.CursorKey
 	for {
 		cursor := page.NewCursor(
@@ -524,16 +530,12 @@ func (s *Service) fetchAudits(
 			},
 		)
 
-		result, err := s.ListAuditsForCompliancePortalID(ctx, scope, compliancePageID, orgID, cursor, nil)
+		result, err := s.ListAuditsForCompliancePortalID(ctx, scope, compliancePageID, orgID, cursor, filter)
 		if err != nil {
 			return nil, fmt.Errorf("cannot list audits: %w", err)
 		}
 
 		for _, audit := range result.Data {
-			if audit.CompliancePortalVisibility == coredata.CompliancePortalVisibilityNone {
-				continue
-			}
-
 			frameworkName := ""
 
 			fw, err := s.GetFramework(ctx, scope, audit.FrameworkID)

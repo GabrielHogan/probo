@@ -1750,6 +1750,10 @@ func (s *DocumentService) clearDocumentReferences(
 		return err
 	}
 
+	if err := coredata.DeleteCompliancePortalDocumentsByDocumentIDs(ctx, tx, scope, documentIDs); err != nil {
+		return fmt.Errorf("cannot delete compliance portal documents: %w", err)
+	}
+
 	return nil
 }
 
