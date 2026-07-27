@@ -39,7 +39,7 @@ import { useFormWithSchema } from "#/hooks/useFormWithSchema";
 import {
   useCreateCompliancePageReferenceMutation,
   useUpdateCompliancePageReferenceMutation,
-} from "#/pages/organizations/compliance-page/_lib/compliancePageReferenceMutations";
+} from "#/pages/organizations/compliance-pages/portal/_lib/compliancePageReferenceMutations";
 
 const referenceSchema = z.object({
   name: z.string().min(1, "Name is required"),

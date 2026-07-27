@@ -106,7 +106,7 @@ func TestMCP_GetCompliancePortal(t *testing.T) {
 		} `json:"updateCompliancePortalBrand"`
 	}
 
-	err = owner.ExecuteWithFile(uploadMutation, map[string]any{
+	err := owner.ExecuteWithFile(uploadMutation, map[string]any{
 		"input": map[string]any{
 			"compliancePortalId": compliancePortalID,
 			"logoFile":           nil,
@@ -140,7 +140,6 @@ func TestMCP_UpdateCompliancePortal(t *testing.T) {
 	t.Parallel()
 	owner := testutil.NewClient(t, testutil.RoleOwner)
 	mc := testutil.NewMCPClient(t, owner)
-	orgID := owner.GetOrganizationID().String()
 
 	// Get compliance portal ID
 	portalID := mcpCompliancePortalID(t, owner)
@@ -184,7 +183,6 @@ func TestMCP_AddCompliancePortalReference(t *testing.T) {
 	t.Parallel()
 	owner := testutil.NewClient(t, testutil.RoleOwner)
 	mc := testutil.NewMCPClient(t, owner)
-	orgID := owner.GetOrganizationID().String()
 
 	// Get compliance portal ID
 	portalID := mcpCompliancePortalID(t, owner)
@@ -206,7 +204,6 @@ func TestMCP_UpdateCompliancePortalReference(t *testing.T) {
 	t.Parallel()
 	owner := testutil.NewClient(t, testutil.RoleOwner)
 	mc := testutil.NewMCPClient(t, owner)
-	orgID := owner.GetOrganizationID().String()
 
 	// Get compliance portal ID
 	portalID := mcpCompliancePortalID(t, owner)
@@ -240,7 +237,6 @@ func TestMCP_DeleteCompliancePortalReference(t *testing.T) {
 	t.Parallel()
 	owner := testutil.NewClient(t, testutil.RoleOwner)
 	mc := testutil.NewMCPClient(t, owner)
-	orgID := owner.GetOrganizationID().String()
 
 	// Get compliance portal ID
 	portalID := mcpCompliancePortalID(t, owner)
@@ -271,7 +267,6 @@ func TestMCP_ListCompliancePortalReferences(t *testing.T) {
 	t.Parallel()
 	owner := testutil.NewClient(t, testutil.RoleOwner)
 	mc := testutil.NewMCPClient(t, owner)
-	orgID := owner.GetOrganizationID().String()
 
 	// Get compliance portal ID
 	portalID := mcpCompliancePortalID(t, owner)
@@ -326,7 +321,6 @@ func TestMCP_AddComplianceCustomLink(t *testing.T) {
 	t.Parallel()
 	owner := testutil.NewClient(t, testutil.RoleOwner)
 	mc := testutil.NewMCPClient(t, owner)
-	orgID := owner.GetOrganizationID().String()
 
 	// Get compliance portal ID
 	portalID := mcpCompliancePortalID(t, owner)
@@ -348,7 +342,6 @@ func TestMCP_UpdateComplianceCustomLink(t *testing.T) {
 	t.Parallel()
 	owner := testutil.NewClient(t, testutil.RoleOwner)
 	mc := testutil.NewMCPClient(t, owner)
-	orgID := owner.GetOrganizationID().String()
 
 	// Get compliance portal ID
 	portalID := mcpCompliancePortalID(t, owner)
@@ -382,7 +375,6 @@ func TestMCP_DeleteComplianceCustomLink(t *testing.T) {
 	t.Parallel()
 	owner := testutil.NewClient(t, testutil.RoleOwner)
 	mc := testutil.NewMCPClient(t, owner)
-	orgID := owner.GetOrganizationID().String()
 
 	// Get compliance portal ID
 	portalID := mcpCompliancePortalID(t, owner)
@@ -413,7 +405,6 @@ func TestMCP_ListComplianceCustomLinks(t *testing.T) {
 	t.Parallel()
 	owner := testutil.NewClient(t, testutil.RoleOwner)
 	mc := testutil.NewMCPClient(t, owner)
-	orgID := owner.GetOrganizationID().String()
 
 	// Get compliance portal ID
 	portalID := mcpCompliancePortalID(t, owner)

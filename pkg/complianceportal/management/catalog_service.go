@@ -47,8 +47,8 @@ type (
 
 	UpdateCompliancePortalThirdPartyPublishedRequest struct {
 		CompliancePortalID gid.GID
-		ThirdPartyID         gid.GID
-		Published            bool
+		ThirdPartyID       gid.GID
+		Published          bool
 	}
 )
 

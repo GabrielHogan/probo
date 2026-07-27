@@ -715,14 +715,14 @@ VALUES (
 		"status_page_url":                  v.StatusPageURL,
 		"terms_of_service_url":             v.TermsOfServiceURL,
 		"security_page_url":                v.SecurityPageURL,
-		"trust_page_url":                   v.TrustPageURL,		"level":                            v.Level,
-		"vetting_status":                   v.VettingStatus,
-		"vetting_website_url":              v.VettingWebsiteURL,
-		"vetting_procedure":                v.VettingProcedure,
-		"vetting_processing_started_at":    v.VettingProcessingStartedAt,
-		"vetting_error_message":            v.VettingErrorMessage,
-		"created_at":                       v.CreatedAt,
-		"updated_at":                       v.UpdatedAt,
+		"trust_page_url":                   v.TrustPageURL, "level": v.Level,
+		"vetting_status":                v.VettingStatus,
+		"vetting_website_url":           v.VettingWebsiteURL,
+		"vetting_procedure":             v.VettingProcedure,
+		"vetting_processing_started_at": v.VettingProcessingStartedAt,
+		"vetting_error_message":         v.VettingErrorMessage,
+		"created_at":                    v.CreatedAt,
+		"updated_at":                    v.UpdatedAt,
 	}
 	_, err := conn.Exec(ctx, q, args)
 
@@ -991,12 +991,12 @@ WHERE %s
 		"security_page_url":                v.SecurityPageURL,
 		"trust_page_url":                   v.TrustPageURL,
 		"business_owner_profile_id":        v.BusinessOwnerID,
-		"security_owner_profile_id":        v.SecurityOwnerID,		"level":                            v.Level,
-		"vetting_status":                   v.VettingStatus,
-		"vetting_website_url":              v.VettingWebsiteURL,
-		"vetting_procedure":                v.VettingProcedure,
-		"vetting_processing_started_at":    v.VettingProcessingStartedAt,
-		"vetting_error_message":            v.VettingErrorMessage,
+		"security_owner_profile_id":        v.SecurityOwnerID, "level": v.Level,
+		"vetting_status":                v.VettingStatus,
+		"vetting_website_url":           v.VettingWebsiteURL,
+		"vetting_procedure":             v.VettingProcedure,
+		"vetting_processing_started_at": v.VettingProcessingStartedAt,
+		"vetting_error_message":         v.VettingErrorMessage,
 	}
 
 	maps.Copy(args, scope.SQLArguments())

@@ -48,9 +48,9 @@ type CreateRightsRequest struct {
 	OrganizationID     gid.GID
 	CompliancePortalID gid.GID
 	RequestType        coredata.RightsRequestType
-	DataSubject    *string
-	Contact        string
-	Details        *string
+	DataSubject        *string
+	Contact            string
+	Details            *string
 }
 
 // Validate bounds the free-text fields with the same rules the console applies,
@@ -81,13 +81,13 @@ func (s *Service) CreateRightsRequest(
 		OrganizationID:     req.OrganizationID,
 		CompliancePortalID: &req.CompliancePortalID,
 		RequestType:        req.RequestType,
-		RequestState:   coredata.RightsRequestStateTodo,
-		DataSubject:    req.DataSubject,
-		Contact:        &req.Contact,
-		Details:        req.Details,
-		Deadline:       &deadline,
-		CreatedAt:      now,
-		UpdatedAt:      now,
+		RequestState:       coredata.RightsRequestStateTodo,
+		DataSubject:        req.DataSubject,
+		Contact:            &req.Contact,
+		Details:            req.Details,
+		Deadline:           &deadline,
+		CreatedAt:          now,
+		UpdatedAt:          now,
 	}
 
 	err := s.pg.WithTx(

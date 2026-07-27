@@ -36,18 +36,18 @@ import (
 
 type (
 	RightsRequest struct {
-		ID             gid.GID            `db:"id"`
-		OrganizationID     gid.GID  `db:"organization_id"`
-		CompliancePortalID *gid.GID `db:"trust_center_id"`
-		RequestType    RightsRequestType  `db:"request_type"`
-		RequestState   RightsRequestState `db:"request_state"`
-		DataSubject    *string            `db:"data_subject"`
-		Contact        *string            `db:"contact"`
-		Details        *string            `db:"details"`
-		Deadline       *time.Time         `db:"deadline"`
-		ActionTaken    *string            `db:"action_taken"`
-		CreatedAt      time.Time          `db:"created_at"`
-		UpdatedAt      time.Time          `db:"updated_at"`
+		ID                 gid.GID            `db:"id"`
+		OrganizationID     gid.GID            `db:"organization_id"`
+		CompliancePortalID *gid.GID           `db:"trust_center_id"`
+		RequestType        RightsRequestType  `db:"request_type"`
+		RequestState       RightsRequestState `db:"request_state"`
+		DataSubject        *string            `db:"data_subject"`
+		Contact            *string            `db:"contact"`
+		Details            *string            `db:"details"`
+		Deadline           *time.Time         `db:"deadline"`
+		ActionTaken        *string            `db:"action_taken"`
+		CreatedAt          time.Time          `db:"created_at"`
+		UpdatedAt          time.Time          `db:"updated_at"`
 	}
 
 	RightsRequests []*RightsRequest

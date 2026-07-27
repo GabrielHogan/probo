@@ -32,10 +32,10 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/jackc/pgx/v5"
 	"go.gearno.de/crypto/uuid"
 	"go.gearno.de/kit/log"
 	"go.gearno.de/kit/pg"
-	"github.com/jackc/pgx/v5"
 	"go.probo.inc/probo/packages/emails"
 	"go.probo.inc/probo/pkg/coredata"
 	"go.probo.inc/probo/pkg/filevalidation"

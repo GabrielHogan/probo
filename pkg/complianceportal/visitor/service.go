@@ -362,9 +362,9 @@ func (s *Service) ProvisionPortalMember(
 							CompliancePortalID:            &compliancePageID,
 							TrustCenterEntityNameSnapshot: &compliancePage.EntityName,
 							DocumentType:                  coredata.ElectronicSignatureDocumentTypeNDA,
-							FileID:         *compliancePage.NonDisclosureAgreementFileID,
-							SignerEmail:    identity.EmailAddress,
-							ConsentText:    NDAConsentText,
+							FileID:                        *compliancePage.NonDisclosureAgreementFileID,
+							SignerEmail:                   identity.EmailAddress,
+							ConsentText:                   NDAConsentText,
 						},
 					)
 					if err != nil {

@@ -113,7 +113,7 @@ LIMIT 1;
 
 	args := pgx.StrictNamedArgs{
 		"trust_center_id": compliancePortalID,
-		"audit_id":          auditID,
+		"audit_id":        auditID,
 	}
 	maps.Copy(args, scope.SQLArguments())
 
@@ -221,7 +221,7 @@ WHERE
 
 	args := pgx.StrictNamedArgs{
 		"trust_center_id": compliancePortalID,
-		"audit_id":          auditID,
+		"audit_id":        auditID,
 	}
 	maps.Copy(args, scope.SQLArguments())
 

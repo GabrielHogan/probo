@@ -135,9 +135,9 @@ const (
 	AccessReviewCampaignSourceFetchAttemptEntityType uint16 = 103
 	CompliancePortalCommitmentGroupEntityType        uint16 = 104
 	CompliancePortalCommitmentEntityType             uint16 = 105
-	CompliancePortalDocumentEntityType                 uint16 = 110
-	CompliancePortalAuditEntityType                    uint16 = 111
-	CompliancePortalThirdPartyEntityType               uint16 = 112
+	CompliancePortalDocumentEntityType               uint16 = 110
+	CompliancePortalAuditEntityType                  uint16 = 111
+	CompliancePortalThirdPartyEntityType             uint16 = 112
 	CertificateEntityType                            uint16 = 106
 	DeviceEntityType                                 uint16 = 107
 	DevicePostureEntityType                          uint16 = 108

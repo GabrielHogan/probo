@@ -40,8 +40,8 @@ type ElectronicSignature struct {
 	ID                             gid.GID                         `db:"id"`
 	TenantID                       gid.TenantID                    `db:"tenant_id"`
 	OrganizationID                 gid.GID                         `db:"organization_id"`
-	CompliancePortalID           *gid.GID `db:"trust_center_id"`
-	TrustCenterEntityNameSnapshot *string  `db:"trust_center_entity_name_snapshot"`
+	CompliancePortalID             *gid.GID                        `db:"trust_center_id"`
+	TrustCenterEntityNameSnapshot  *string                         `db:"trust_center_entity_name_snapshot"`
 	Status                         ElectronicSignatureStatus       `db:"status"`
 	DocumentType                   ElectronicSignatureDocumentType `db:"document_type"`
 	DocumentName                   *string                         `db:"document_name"`
@@ -141,23 +141,23 @@ INSERT INTO electronic_signatures (
 )
 `
 	args := pgx.StrictNamedArgs{
-		"id":              es.ID,
-		"tenant_id":       scope.GetTenantID(),
-		"organization_id": es.OrganizationID,
-		"trust_center_id": es.CompliancePortalID,
+		"id":                                es.ID,
+		"tenant_id":                         scope.GetTenantID(),
+		"organization_id":                   es.OrganizationID,
+		"trust_center_id":                   es.CompliancePortalID,
 		"trust_center_entity_name_snapshot": es.TrustCenterEntityNameSnapshot,
-		"status":          es.Status,
-		"document_type":   es.DocumentType,
-		"document_name":   es.DocumentName,
-		"file_id":         es.FileID,
-		"signer_email":    es.SignerEmail,
-		"consent_text":    es.ConsentText,
-		"email_subject":   es.EmailSubject,
-		"seal_version":    es.SealVersion,
-		"attempt_count":   es.AttemptCount,
-		"max_attempts":    es.MaxAttempts,
-		"created_at":      es.CreatedAt,
-		"updated_at":      es.UpdatedAt,
+		"status":                            es.Status,
+		"document_type":                     es.DocumentType,
+		"document_name":                     es.DocumentName,
+		"file_id":                           es.FileID,
+		"signer_email":                      es.SignerEmail,
+		"consent_text":                      es.ConsentText,
+		"email_subject":                     es.EmailSubject,
+		"seal_version":                      es.SealVersion,
+		"attempt_count":                     es.AttemptCount,
+		"max_attempts":                      es.MaxAttempts,
+		"created_at":                        es.CreatedAt,
+		"updated_at":                        es.UpdatedAt,
 	}
 
 	_, err := conn.Exec(ctx, q, args)

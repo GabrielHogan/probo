@@ -222,9 +222,9 @@ export function Sidebar(props: { fKey: SidebarFragment$key }) {
       )}
       {organization.canGetCompliancePage && (
         <SidebarItem
-          label={t("sidebar.compliancePage")}
+          label={t("sidebar.compliancePages")}
           icon={IconShield}
-          to={`${prefix}/compliance-page`}
+          to={`${prefix}/compliance-pages`}
         />
       )}
       {organization.canListCookieBanners && (
