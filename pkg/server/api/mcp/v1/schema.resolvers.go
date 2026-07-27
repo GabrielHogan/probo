@@ -88,7 +88,17 @@ func (r *Resolver) ListThirdPartiesTool(ctx context.Context, req *mcp.CallToolRe
 		panic(fmt.Errorf("cannot list organization thirdParties: %w", err))
 	}
 
-	return nil, types.NewListThirdPartiesOutput(page), nil
+	thirdPartyIDs := make([]gid.GID, len(page.Data))
+	for i, tp := range page.Data {
+		thirdPartyIDs[i] = tp.ID
+	}
+
+	administratorIDsByThirdPartyID, err := prb.ThirdParties.MapAdministratorIDsForThirdPartyIDs(ctx, scope, thirdPartyIDs)
+	if err != nil {
+		return nil, types.ListThirdPartiesOutput{}, fmt.Errorf("cannot load third party administrators: %w", err)
+	}
+
+	return nil, types.NewListThirdPartiesOutput(page, administratorIDsByThirdPartyID), nil
 }
 
 // AddThirdPartyTool handles the addThirdParty tool
@@ -133,8 +143,7 @@ func (r *Resolver) AddThirdPartyTool(ctx context.Context, req *mcp.CallToolReque
 			SubprocessorsListURL:          input.SubprocessorsListURL,
 			Certifications:                input.Certifications,
 			Countries:                     countries,
-			BusinessOwnerID:               input.BusinessOwnerID,
-			SecurityOwnerID:               input.SecurityOwnerID,
+			AdministratorIDs:              input.AdministratorIds,
 			StatusPageURL:                 input.StatusPageURL,
 			TermsOfServiceURL:             input.TermsOfServiceURL,
 			SecurityPageURL:               input.SecurityPageURL,
@@ -145,7 +154,7 @@ func (r *Resolver) AddThirdPartyTool(ctx context.Context, req *mcp.CallToolReque
 		return nil, types.AddThirdPartyOutput{}, fmt.Errorf("failed to create thirdParty: %w", err)
 	}
 
-	return nil, types.NewAddThirdPartyOutput(thirdParty), nil
+	return nil, types.NewAddThirdPartyOutput(thirdParty, input.AdministratorIds), nil
 }
 
 // UpdateThirdPartyTool handles the updateThirdParty tool
@@ -223,14 +232,9 @@ func (r *Resolver) UpdateThirdPartyTool(ctx context.Context, req *mcp.CallToolRe
 		trustPageURL = &input.TrustPageURL
 	}
 
-	var businessOwnerID **gid.GID
-	if input.BusinessOwnerID != nil {
-		businessOwnerID = &input.BusinessOwnerID
-	}
-
-	var securityOwnerID **gid.GID
-	if input.SecurityOwnerID != nil {
-		securityOwnerID = &input.SecurityOwnerID
+	var administratorIDs *[]gid.GID
+	if input.AdministratorIds != nil {
+		administratorIDs = &input.AdministratorIds
 	}
 
 	var category *coredata.ThirdPartyCategory
@@ -265,8 +269,7 @@ func (r *Resolver) UpdateThirdPartyTool(ctx context.Context, req *mcp.CallToolRe
 			SubprocessorsListURL:          subprocessorsListURL,
 			Certifications:                input.Certifications,
 			Countries:                     countries,
-			BusinessOwnerID:               businessOwnerID,
-			SecurityOwnerID:               securityOwnerID,
+			AdministratorIDs:              administratorIDs,
 			StatusPageURL:                 statusPageURL,
 			TermsOfServiceURL:             termsOfServiceURL,
 			SecurityPageURL:               securityPageURL,
@@ -277,7 +280,12 @@ func (r *Resolver) UpdateThirdPartyTool(ctx context.Context, req *mcp.CallToolRe
 		return nil, types.UpdateThirdPartyOutput{}, fmt.Errorf("failed to update thirdParty: %w", err)
 	}
 
-	return nil, types.NewUpdateThirdPartyOutput(thirdParty), nil
+	administratorIDsByThirdPartyID, err := svc.ThirdParties.MapAdministratorIDsForThirdPartyIDs(ctx, scope, []gid.GID{thirdParty.ID})
+	if err != nil {
+		return nil, types.UpdateThirdPartyOutput{}, fmt.Errorf("cannot load third party administrators: %w", err)
+	}
+
+	return nil, types.NewUpdateThirdPartyOutput(thirdParty, administratorIDsByThirdPartyID[thirdParty.ID]), nil
 }
 
 func (r *Resolver) ListRisksTool(ctx context.Context, req *mcp.CallToolRequest, input *types.ListRisksInput) (*mcp.CallToolResult, types.ListRisksOutput, error) {
@@ -5412,8 +5420,13 @@ func (r *Resolver) VetThirdPartyTool(ctx context.Context, req *mcp.CallToolReque
 		return nil, types.VetThirdPartyOutput{}, fmt.Errorf("internal server error")
 	}
 
+	administratorIDsByThirdPartyID, err := r.proboSvc.ThirdParties.MapAdministratorIDsForThirdPartyIDs(ctx, scope, []gid.GID{thirdParty.ID})
+	if err != nil {
+		return nil, types.VetThirdPartyOutput{}, fmt.Errorf("cannot load third party administrators: %w", err)
+	}
+
 	return nil, types.VetThirdPartyOutput{
-		ThirdParty: types.NewThirdParty(thirdParty),
+		ThirdParty: types.NewThirdParty(thirdParty, administratorIDsByThirdPartyID[thirdParty.ID]),
 	}, nil
 }
 
@@ -6316,7 +6329,17 @@ func (r *Resolver) ListChildThirdPartiesTool(ctx context.Context, req *mcp.CallT
 		panic(fmt.Errorf("cannot list child third parties: %w", err))
 	}
 
-	return nil, types.NewListChildThirdPartiesOutput(page), nil
+	thirdPartyIDs := make([]gid.GID, len(page.Data))
+	for i, tp := range page.Data {
+		thirdPartyIDs[i] = tp.ID
+	}
+
+	administratorIDsByThirdPartyID, err := r.proboSvc.ThirdParties.MapAdministratorIDsForThirdPartyIDs(ctx, scope, thirdPartyIDs)
+	if err != nil {
+		return nil, types.ListChildThirdPartiesOutput{}, fmt.Errorf("cannot load third party administrators: %w", err)
+	}
+
+	return nil, types.NewListChildThirdPartiesOutput(page, administratorIDsByThirdPartyID), nil
 }
 
 func (r *Resolver) ListRiskAssessmentsTool(ctx context.Context, req *mcp.CallToolRequest, input *types.ListRiskAssessmentsInput) (*mcp.CallToolResult, types.ListRiskAssessmentsOutput, error) {
