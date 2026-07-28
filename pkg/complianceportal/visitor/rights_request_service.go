@@ -58,6 +58,12 @@ type CreateRightsRequest struct {
 func (r *CreateRightsRequest) Validate() error {
 	v := validator.New()
 
+	v.Check(
+		r.CompliancePortalID,
+		"compliance_portal_id",
+		validator.Required(),
+		validator.GID(coredata.CompliancePortalEntityType),
+	)
 	v.Check(r.DataSubject, "data_subject", validator.SafeText(probo.ContentMaxLength))
 	v.Check(r.Details, "details", validator.SafeText(probo.ContentMaxLength))
 
