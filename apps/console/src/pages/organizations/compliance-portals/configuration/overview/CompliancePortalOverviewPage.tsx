@@ -45,9 +45,11 @@ export const compliancePortalOverviewPageQuery = graphql`
   }
 `;
 
-export default function CompliancePortalOverviewPage(props: { queryRef: PreloadedQuery<CompliancePortalOverviewPageQuery> }) {
-  const { queryRef } = props;
+interface CompliancePortalOverviewPageProps {
+  queryRef: PreloadedQuery<CompliancePortalOverviewPageQuery>;
+}
 
+export default function CompliancePortalOverviewPage({ queryRef }: CompliancePortalOverviewPageProps) {
   const data = usePreloadedQuery<CompliancePortalOverviewPageQuery>(
     compliancePortalOverviewPageQuery,
     queryRef,

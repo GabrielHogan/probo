@@ -37,9 +37,11 @@ export const compliancePortalCommitmentsPageQuery = graphql`
   }
 `;
 
-export default function CompliancePortalCommitmentsPage(props: { queryRef: PreloadedQuery<CompliancePortalCommitmentsPageQuery> }) {
-  const { queryRef } = props;
+interface CompliancePortalCommitmentsPageProps {
+  queryRef: PreloadedQuery<CompliancePortalCommitmentsPageQuery>;
+}
 
+export default function CompliancePortalCommitmentsPage({ queryRef }: CompliancePortalCommitmentsPageProps) {
   const { compliancePortal } = usePreloadedQuery<CompliancePortalCommitmentsPageQuery>(
     compliancePortalCommitmentsPageQuery,
     queryRef,

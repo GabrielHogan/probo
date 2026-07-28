@@ -48,9 +48,11 @@ export const compliancePortalBrandPageQuery = graphql`
   }
 `;
 
-export default function CompliancePortalBrandPage(props: { queryRef: PreloadedQuery<CompliancePortalBrandPageQuery> }) {
-  const { queryRef } = props;
+interface CompliancePortalBrandPageProps {
+  queryRef: PreloadedQuery<CompliancePortalBrandPageQuery>;
+}
 
+export default function CompliancePortalBrandPage({ queryRef }: CompliancePortalBrandPageProps) {
   const data = usePreloadedQuery<CompliancePortalBrandPageQuery>(compliancePortalBrandPageQuery, queryRef);
   if (data.compliancePortal.__typename !== "CompliancePortal") {
     throw new Error("invalid type for node");

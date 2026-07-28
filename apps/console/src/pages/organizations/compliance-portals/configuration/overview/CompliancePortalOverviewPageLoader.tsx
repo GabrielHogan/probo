@@ -20,10 +20,10 @@
 
 import { Suspense, useEffect } from "react";
 import { useQueryLoader } from "react-relay";
+import { useParams } from "react-router";
 
 import type { CompliancePortalOverviewPageQuery } from "#/__generated__/core/CompliancePortalOverviewPageQuery.graphql";
 import { LinkCardSkeleton } from "#/components/skeletons/LinkCardSkeleton";
-import { useParams } from "react-router";
 import { useOrganizationId } from "#/hooks/useOrganizationId";
 
 import CompliancePortalOverviewPage, { compliancePortalOverviewPageQuery } from "./CompliancePortalOverviewPage";

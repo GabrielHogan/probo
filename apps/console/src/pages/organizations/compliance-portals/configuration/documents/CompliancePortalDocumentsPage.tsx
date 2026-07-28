@@ -44,9 +44,11 @@ export const compliancePortalDocumentsPageQuery = graphql`
   }
 `;
 
-export default function CompliancePortalDocumentsPage(props: { queryRef: PreloadedQuery<CompliancePortalDocumentsPageQuery> }) {
-  const { queryRef } = props;
+interface CompliancePortalDocumentsPageProps {
+  queryRef: PreloadedQuery<CompliancePortalDocumentsPageQuery>;
+}
 
+export default function CompliancePortalDocumentsPage({ queryRef }: CompliancePortalDocumentsPageProps) {
   const { compliancePortalId } = useParams<{ compliancePortalId: string }>();
   const { t } = useTranslation("organizations/compliance-portals");
 

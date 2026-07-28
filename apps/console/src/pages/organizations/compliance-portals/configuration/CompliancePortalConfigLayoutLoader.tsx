@@ -20,10 +20,10 @@
 
 import { Suspense, useEffect } from "react";
 import { useQueryLoader } from "react-relay";
+import { useParams } from "react-router";
 
 import type { CompliancePortalConfigLayoutQuery } from "#/__generated__/core/CompliancePortalConfigLayoutQuery.graphql";
 import { PageSkeleton } from "#/components/skeletons/PageSkeleton";
-import { useParams } from "react-router";
 
 import CompliancePortalConfigLayout, { compliancePortalConfigLayoutQuery } from "./CompliancePortalConfigLayout";
 

@@ -37,9 +37,11 @@ export const compliancePortalAccessPageQuery = graphql`
   }
 `;
 
-export default function CompliancePortalAccessPage(props: { queryRef: PreloadedQuery<CompliancePortalAccessPageQuery> }) {
-  const { queryRef } = props;
+interface CompliancePortalAccessPageProps {
+  queryRef: PreloadedQuery<CompliancePortalAccessPageQuery>;
+}
 
+export default function CompliancePortalAccessPage({ queryRef }: CompliancePortalAccessPageProps) {
   const { t } = useTranslation("organizations/compliance-portals");
 
   const { compliancePortal } = usePreloadedQuery<CompliancePortalAccessPageQuery>(
