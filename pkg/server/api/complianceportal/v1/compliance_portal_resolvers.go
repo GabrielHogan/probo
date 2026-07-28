@@ -1120,7 +1120,7 @@ func (r *mutationResolver) RequestAccesses(ctx context.Context, input types.Requ
 	requestFileIDs := make([]gid.GID, 0, len(input.CompliancePortalFileIds))
 
 	for _, documentID := range input.DocumentIds {
-		document, err := visitorService.GetDocument(ctx, scope, compliancePortal.OrganizationID, documentID)
+		document, err := visitorService.GetDocument(ctx, scope, compliancePortal.ID, compliancePortal.OrganizationID, documentID)
 		if err != nil {
 			if errors.Is(err, visitor.ErrDocumentNotFound) || errors.Is(err, visitor.ErrDocumentNotVisible) || errors.Is(err, coredata.ErrResourceNotFound) {
 				return nil, gqlutils.NotFoundf(ctx, "document %q not found", documentID)
@@ -1146,9 +1146,9 @@ func (r *mutationResolver) RequestAccesses(ctx context.Context, input types.Requ
 	}
 
 	for _, reportID := range input.ReportIds {
-		audit, err := visitorService.GetAuditByReportFileID(ctx, scope, reportID)
+		audit, err := visitorService.GetAuditByReportFileID(ctx, scope, compliancePortal.ID, reportID)
 		if err != nil {
-			if errors.Is(err, coredata.ErrResourceNotFound) {
+			if errors.Is(err, coredata.ErrResourceNotFound) || errors.Is(err, visitor.ErrReportNotFound) {
 				return nil, gqlutils.NotFoundf(ctx, "report %q not found", reportID)
 			}
 
@@ -1166,7 +1166,7 @@ func (r *mutationResolver) RequestAccesses(ctx context.Context, input types.Requ
 	}
 
 	for _, fileID := range input.CompliancePortalFileIds {
-		portalFile, err := visitorService.GetPortalFile(ctx, scope, compliancePortal.OrganizationID, fileID)
+		portalFile, err := visitorService.GetPortalFile(ctx, scope, compliancePortal.ID, compliancePortal.OrganizationID, fileID)
 		if err != nil {
 			if errors.Is(err, visitor.ErrPortalFileNotFound) || errors.Is(err, visitor.ErrPortalFileNotVisible) {
 				return nil, gqlutils.NotFoundf(ctx, "compliance portal file %q not found", fileID)
