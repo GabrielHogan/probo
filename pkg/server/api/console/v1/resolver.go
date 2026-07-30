@@ -431,6 +431,19 @@ func handleConnectorComplete(
 		q := parsedURL.Query()
 		q.Set("connector_id", cnnctr.ID.String())
 		q.Set("provider", string(connectorProvider))
+
+		// Surface scopes still absent after a successful (possibly partial)
+		// grant so the continue page can toast them. Best-effort: a lookup
+		// failure must not fail the OAuth redirect.
+		missingScopes, err := accessReviewSvc.SourceMissingOAuthScopes(r.Context(), scope, cnnctr.ID)
+		if err != nil {
+			logger.WarnCtx(r.Context(), "cannot determine missing OAuth scopes after connector complete", log.Error(err))
+		} else {
+			for _, missingScope := range missingScopes {
+				q.Add("missing_scope", missingScope)
+			}
+		}
+
 		parsedURL.RawQuery = q.Encode()
 
 		safeRedirect.Redirect(w, r, parsedURL.String(), "/", http.StatusSeeOther)

@@ -1534,7 +1534,7 @@
     "errors": { "delete": "Failed to delete access source", "configure": "Failed to configure source" },
     "messages": { "error": "Error", "success": "Success", "organizationUpdated": "Organization updated." },
     "deleteConfirmation": "This will permanently delete \"{{name}}\". This action cannot be undone.",
-    "status": { "connected": "Connected", "disconnected": "Disconnected", "invalidCredentials": "Invalid credentials", "reconnectRequired": "Reconnect required" },
+    "status": { "connected": "Connected", "disconnected": "Disconnected", "invalidCredentials": "Invalid credentials", "reconnectRequired": "Reconnect required", "missingScopes": "Missing permissions: {{scopes}}" },
     "actions": { "reconnect": "Reconnect", "delete": "Delete" },
     "loading": "Loading...",
     "selectOrganization": "Select organization",
@@ -1658,7 +1658,7 @@
     "messages": { "error": "Error", "success": "Success", "created": "Access source created successfully." }
   },
   "accessReviewSourcesTab": {
-    "errors": { "create": "Failed to create access source" },
+    "errors": { "create": "Failed to create access source", "missingScopes": "The connection is missing required permissions: {{scopes}}. Reconnect after granting them in your provider admin console." },
     "messages": { "error": "Error", "success": "Success", "created": "Access source created successfully." },
     "actions": { "addSource": "Add source", "loading": "Loading...", "loadMore": "Load more" },
     "columns": { "name": "Name", "source": "Source", "status": "Status", "organization": "Organization", "createdAt": "Created at" },

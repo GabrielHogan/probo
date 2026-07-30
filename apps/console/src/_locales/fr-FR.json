@@ -2958,7 +2958,8 @@
       "connected": "Connecté",
       "disconnected": "Déconnecté",
       "invalidCredentials": "Identifiants invalides",
-      "reconnectRequired": "Reconnexion requise"
+      "reconnectRequired": "Reconnexion requise",
+      "missingScopes": "Permissions manquantes : {{scopes}}"
     },
     "actions": {
       "reconnect": "Reconnecter",
@@ -3339,7 +3340,8 @@
   },
   "accessReviewSourcesTab": {
     "errors": {
-      "create": "Échec de la création de la source d’accès"
+      "create": "Échec de la création de la source d’accès",
+      "missingScopes": "La connexion n’a pas les permissions requises : {{scopes}}. Reconnectez après les avoir accordées dans la console d’administration du fournisseur."
     },
     "messages": {
       "error": "Erreur",

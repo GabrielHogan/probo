@@ -145,21 +145,37 @@ export default function AccessReviewSourcesTab({ queryRef }: Props) {
     );
 
   // Handle OAuth callback: after the provider redirects back with connector_id,
-  // automatically create the access source for that connector.
+  // automatically create the access source for that connector. When the grant
+  // is missing required scopes, toast them instead of a silent success.
   const callbackConnectorId = searchParams.get("connector_id");
   const callbackProvider = searchParams.get("provider");
+  const missingScopesKey = searchParams.getAll("missing_scope").join("\n");
   const hasSourceForCallback = !!callbackConnectorId
     && accessReviewSources?.edges.some(edge => edge.node.connectorId === callbackConnectorId);
+
+  const clearOAuthCallbackParams = (params: URLSearchParams) => {
+    params.delete("connector_id");
+    params.delete("provider");
+    params.delete("missing_scope");
+    return params;
+  };
 
   useEffect(() => {
     if (!callbackConnectorId) return;
 
+    const missingScopes = missingScopesKey === "" ? [] : missingScopesKey.split("\n");
+
     if (hasSourceForCallback) {
-      setSearchParams((params) => {
-        params.delete("connector_id");
-        params.delete("provider");
-        return params;
-      }, { replace: true });
+      if (missingScopes.length > 0) {
+        toast({
+          title: t("accessReviewSourcesTab.messages.error"),
+          description: t("accessReviewSourcesTab.errors.missingScopes", {
+            scopes: missingScopes.join(", "),
+          }),
+          variant: "error",
+        });
+      }
+      setSearchParams(clearOAuthCallbackParams, { replace: true });
       return;
     }
 
@@ -186,11 +202,7 @@ export default function AccessReviewSourcesTab({ queryRef }: Props) {
       onCompleted(_, errors) {
         if (errors?.length) {
           processedConnectorIdRef.current = null;
-          setSearchParams((params) => {
-            params.delete("connector_id");
-            params.delete("provider");
-            return params;
-          }, { replace: true });
+          setSearchParams(clearOAuthCallbackParams, { replace: true });
           toast({
             title: t("accessReviewSourcesTab.messages.error"),
             description: formatError(
@@ -201,24 +213,26 @@ export default function AccessReviewSourcesTab({ queryRef }: Props) {
           });
           return;
         }
-        toast({
-          title: t("accessReviewSourcesTab.messages.success"),
-          description: t("accessReviewSourcesTab.messages.created"),
-          variant: "success",
-        });
-        setSearchParams((params) => {
-          params.delete("connector_id");
-          params.delete("provider");
-          return params;
-        }, { replace: true });
+        if (missingScopes.length > 0) {
+          toast({
+            title: t("accessReviewSourcesTab.messages.error"),
+            description: t("accessReviewSourcesTab.errors.missingScopes", {
+              scopes: missingScopes.join(", "),
+            }),
+            variant: "error",
+          });
+        } else {
+          toast({
+            title: t("accessReviewSourcesTab.messages.success"),
+            description: t("accessReviewSourcesTab.messages.created"),
+            variant: "success",
+          });
+        }
+        setSearchParams(clearOAuthCallbackParams, { replace: true });
       },
       onError(error) {
         processedConnectorIdRef.current = null;
-        setSearchParams((params) => {
-          params.delete("connector_id");
-          params.delete("provider");
-          return params;
-        }, { replace: true });
+        setSearchParams(clearOAuthCallbackParams, { replace: true });
         toast({
           title: t("accessReviewSourcesTab.messages.error"),
           description: formatError(
@@ -236,6 +250,7 @@ export default function AccessReviewSourcesTab({ queryRef }: Props) {
     createAccessReviewSource,
     hasSourceForCallback,
     isCreatingSource,
+    missingScopesKey,
     organizationId,
     accessReviewSources.__id,
     setSearchParams,

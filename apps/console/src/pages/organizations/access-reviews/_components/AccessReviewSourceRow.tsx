@@ -54,6 +54,7 @@ const fragment = graphql`
       oauth2Scopes
     }
     connectionStatus
+    missingOAuthScopes
     selectedOrganization
     needsConfiguration
     createdAt
@@ -263,14 +264,23 @@ export function AccessReviewSourceRow({ fKey, connectionId, organizationId }: Pr
           </Badge>
         )}
         {accessSource.connectionStatus === "RECONNECT_REQUIRED" && (
-          <div className="flex items-center gap-2">
-            <Badge variant="warning" size="sm">
-              {t("accessReviewSourceRow.status.reconnectRequired")}
-            </Badge>
-            {showReconnect && (
-              <Button variant="secondary" onClick={handleReconnect}>
-                {t("accessReviewSourceRow.actions.reconnect")}
-              </Button>
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <Badge variant="warning" size="sm">
+                {t("accessReviewSourceRow.status.reconnectRequired")}
+              </Badge>
+              {showReconnect && (
+                <Button variant="secondary" onClick={handleReconnect}>
+                  {t("accessReviewSourceRow.actions.reconnect")}
+                </Button>
+              )}
+            </div>
+            {accessSource.missingOAuthScopes.length > 0 && (
+              <p className="text-sm text-txt-tertiary">
+                {t("accessReviewSourceRow.status.missingScopes", {
+                  scopes: accessSource.missingOAuthScopes.join(", "),
+                })}
+              </p>
             )}
           </div>
         )}

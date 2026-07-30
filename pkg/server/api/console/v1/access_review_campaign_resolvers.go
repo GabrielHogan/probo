@@ -543,6 +543,40 @@ func (r *accessReviewSourceResolver) ConnectionStatus(ctx context.Context, obj *
 	return types.AccessReviewSourceConnectionStatusConnected, nil
 }
 
+// MissingOAuthScopes is the resolver for the missingOAuthScopes field.
+//
+// Returns the OAuth scopes required by the current provider registration that
+// are absent from the connector's stored grant. Empty when the source has no
+// connector, the connector is missing, or the grant already covers the
+// required set.
+func (r *accessReviewSourceResolver) MissingOAuthScopes(ctx context.Context, obj *types.AccessReviewSource) ([]string, error) {
+	if obj.ConnectorID == nil {
+		return []string{}, nil
+	}
+
+	scope, err := r.authorize(ctx, obj.ID, accessreview.ActionSourceGet)
+	if err != nil {
+		return nil, err
+	}
+
+	missing, err := r.accessReview.SourceMissingOAuthScopes(ctx, scope, *obj.ConnectorID)
+	if err != nil {
+		if errors.Is(err, coredata.ErrResourceNotFound) {
+			return []string{}, nil
+		}
+
+		r.logger.ErrorCtx(ctx, "cannot determine access source missing OAuth scopes", log.Error(err))
+
+		return nil, gqlutils.Internal(ctx)
+	}
+
+	if missing == nil {
+		return []string{}, nil
+	}
+
+	return missing, nil
+}
+
 // SelectedOrganization is the resolver for the selectedOrganization field.
 func (r *accessReviewSourceResolver) SelectedOrganization(ctx context.Context, obj *types.AccessReviewSource) (*string, error) {
 	scope, err := r.authorize(ctx, obj.ID, accessreview.ActionSourceGet)
