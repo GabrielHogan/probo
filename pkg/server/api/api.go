@@ -112,10 +112,12 @@ type (
 )
 
 var (
-	ErrMissingProboService = errors.New("server configuration requires a valid probo.Service instance")
-	ErrMissingIAMService   = errors.New("server configuration requires a valid iam.Service instance")
-	ErrMissingSlackService = errors.New("server configuration requires a valid slack.Service instance")
-	ErrMissingITAMService  = errors.New("server configuration requires a valid itam.Service instance")
+	ErrMissingProboService    = errors.New("server configuration requires a valid probo.Service instance")
+	ErrMissingIAMService      = errors.New("server configuration requires a valid iam.Service instance")
+	ErrMissingSlackService    = errors.New("server configuration requires a valid slack.Service instance")
+	ErrMissingITAMService     = errors.New("server configuration requires a valid itam.Service instance")
+	ErrMissingAgentRunService = errors.New("server configuration requires a valid agentrun.Service instance")
+	ErrMissingMailmanService  = errors.New("server configuration requires a valid mailman.Service instance")
 )
 
 func methodNotAllowed(w http.ResponseWriter, r *http.Request) {
@@ -157,6 +159,14 @@ func NewServer(cfg Config) (*Server, error) {
 
 	if cfg.ITAM == nil {
 		return nil, ErrMissingITAMService
+	}
+
+	if cfg.AgentRun == nil {
+		return nil, ErrMissingAgentRunService
+	}
+
+	if cfg.Mailman == nil {
+		return nil, ErrMissingMailmanService
 	}
 
 	csrf := http.NewCrossOriginProtection()
@@ -245,6 +255,9 @@ func NewServer(cfg Config) (*Server, error) {
 			cfg.AccessReview,
 			cfg.CookieBanner,
 			cfg.RiskManagement,
+			cfg.ITAM,
+			cfg.AgentRun,
+			cfg.Mailman,
 			cfg.TokenSecret,
 			cfg.File,
 			cfg.BaseURL,
