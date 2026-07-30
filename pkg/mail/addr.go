@@ -97,6 +97,11 @@ func (a *Addr) Scan(value any) error {
 		return fmt.Errorf("invalid type %T for mail.Addr", value)
 	}
 
+	if str == "" {
+		*a = Nil
+		return nil
+	}
+
 	parsed, err := ParseAddr(str)
 	if err != nil {
 		return err
